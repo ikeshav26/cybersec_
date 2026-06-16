@@ -6,3 +6,6 @@ pnpm-lock.yaml
 package.json
 tsconfig.json
 .turbo
+data    
+data/
+data/**/**
