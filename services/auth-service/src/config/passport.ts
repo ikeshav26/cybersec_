@@ -1,6 +1,7 @@
 import { Strategy as GitHubStrategy } from 'passport-github2'
 import passport from 'passport'
 import dotenv from 'dotenv'
+import { Request } from 'express'
 import { prisma } from './db.js'
 
 dotenv.config()
@@ -12,8 +13,10 @@ passport.use(
             clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
             callbackURL: `${process.env.API_URL || 'http://localhost:5000/api'}/auth/github/callback`,
             scope: ['user:email'],
+            passReqToCallback: true
         },
         async (
+            req: Request,
             accessToken: string,
             refreshToken: string,
             profile: any,
@@ -22,6 +25,8 @@ passport.use(
             try {
                 const email = profile.emails?.[0]?.value
                 const avatarUrl = profile.photos?.[0]?.value
+
+                const installation_id = req?.query?.installation_id as string;
 
                 if (!email) {
                     return done(new Error('No email provided by GitHub'), null)
@@ -32,6 +37,22 @@ passport.use(
                     where: { githubId: String(profile.id) },
                 })
 
+                console.log(installation_id)
+
+                console.log(user)
+
+                if (installation_id && user) {
+                    const updatedUser = await prisma.user.update({
+                        where: { email: email },
+                        data: {
+                            installationID: installation_id
+                        }
+                    })
+                    user.installationID = updatedUser.installationID
+                }
+
+                console.log(user)
+
                 // 2. If not, register them
                 if (!user) {
                     user = await prisma.user.create({
@@ -41,6 +62,7 @@ passport.use(
                             username: profile.username || `user_${profile.id}`,
                             name: profile.displayName || profile.username,
                             avatar: avatarUrl,
+                            installationID: installation_id || null
                         },
                     })
                 }

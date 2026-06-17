@@ -1,0 +1,8 @@
+import 'dotenv/config'
+import app from './src/app.js'
+
+const PORT = process.env.PORT || 5001
+
+app.listen(PORT, () => {
+    console.log(`App-Integration-Service running on ${PORT}`)
+})

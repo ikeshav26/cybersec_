@@ -12,14 +12,14 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model User {
-  id          String    @id @default(uuid())
-  githubId    String    @unique
-  email       String    @unique
-  username    String    @unique
-  name        String?
-  avatar      String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String   @id @default(uuid())
+  githubId       String   @unique
+  email          String   @unique
+  username       String   @unique
+  installationID String?  @unique
+  name           String?
+  avatar         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

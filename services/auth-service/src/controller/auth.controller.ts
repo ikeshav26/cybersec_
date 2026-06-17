@@ -9,6 +9,7 @@ interface User {
     username: string,
     name: string,
     avatar: string,
+    installationID: string
 }
 
 export const authController = (req: Request, res: Response, next: NextFunction) => {
@@ -30,7 +31,7 @@ export const authController = (req: Request, res: Response, next: NextFunction) 
             const token: string | null = generateToken(user.id);
 
             res.redirect(
-                `${process.env.CLIENT_URL}/?oauth=success&token=${encodeURIComponent(token ? token : "")}&user=${encodeURIComponent(JSON.stringify({ userId: user.id, username: user.username, email: user.email, avatar: user.avatar }))}`
+                `${process.env.CLIENT_URL}/?oauth=success&token=${encodeURIComponent(token ? token : "")}&user=${encodeURIComponent(JSON.stringify({ userId: user.id, username: user.username, email: user.email, avatar: user.avatar, installationID: user.installationID }))}`
             );
         })(req, res, next);
     } catch (err) {
