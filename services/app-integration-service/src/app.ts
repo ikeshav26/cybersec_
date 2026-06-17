@@ -8,16 +8,16 @@ import cors from 'cors'
 const app: Application = express()
 
 app.use(
-    cors({
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
-        credentials: true
-    })
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true,
+  }),
 )
 app.use(express.json())
 app.use(cookieParser())
 
 app.get('/', (req: Request, res: Response) => {
-    res.status(200).json({ message: 'hello from app integration service' })
+  res.status(200).json({ message: 'hello from app integration service' })
 })
 
 app.use('/api/v1', integrationRoutes)

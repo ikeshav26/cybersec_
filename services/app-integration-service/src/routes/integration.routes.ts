@@ -4,7 +4,6 @@ import { createInstallation, syncRepos } from '../controller/integration.control
 
 const router = express.Router()
 
-
 router.post('/install/app', userAuth, createInstallation)
 router.post('/sync/repos', userAuth, syncRepos)
 
