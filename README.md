@@ -1,159 +1,47 @@
-# Turborepo starter
+# CyberSuite
 
-This Turborepo starter is maintained by the Turborepo core team.
+**CyberSuite** is an AI-powered repository security monitoring and vulnerability remediation platform. Built using a modern **microservices architecture** inside a **Turborepo monorepo**, the project enables users to authenticate via GitHub, connect their repositories, automatically scan their codebase for vulnerabilities using Gemini AI, and apply patches directly via automated Pull Requests.
 
-## Using this example
+---
 
-Run the following command:
+## Project Architecture & Directory Structure
 
-```sh
-npx create-turbo@latest
+The project is structured as a monorepo containing multiple independent services and frontend applications:
+
+```text
+├── apps/
+│   └── web/                        # Next.js frontend application (Testing Dashboard)
+├── services/
+│   ├── auth-service/               # Service for user profiles, GitHub OAuth, and session tokens
+│   ├── app-integration-service/    # Service for GitHub App installation and repository syncing
+│   └── secure-bot/                 # Service for AI vulnerability scanning, cloning, and PR patching
+├── packages/                       # Shared configurations (TypeScript, ESLint, UI UI stub library)
+└── docs/                           # Detailed service flows and documentation
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## Services Overview
 
-### Apps and Packages
+### 1. Web Application (`apps/web`)
+A Next.js frontend application featuring a dark mode glassmorphic dashboard. It serves as the visual testing interface, handling successful OAuth redirects, linking user sessions to GitHub App installations, triggering repository sync tasks on the integration service, and displaying active, protected code repositories.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### 2. Authentication Service (`services/auth-service`)
+An Express microservice that manages user identity, GitHub OAuth verification, and authentication cookies/tokens. It connects to the Postgres database using a dedicated `auth` schema namespace to store user profiles and track installation mappings.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### 3. App Integration Service (`services/app-integration-service`)
+An Express microservice that connects to the database via a dedicated `integration` schema namespace. It manages the registration of GitHub App installations and interacts with the GitHub API using Octokit to fetch and sync the list of repositories accessible to the app.
 
-### Utilities
+### 4. Secure Bot (`services/secure-bot`)
+The core security agent that automates vulnerability detection and fixing. When a repository scan is requested:
+* It obtains credentials and locally clones the target repository.
+* It parses code files and passes them to the Gemini AI API for security auditing.
+* It programmatically applies suggested security patches, creates remediation git branches, and opens automated Pull Requests.
 
-This Turborepo has some additional tools already setup for you:
+---
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+## Architectural Highlights
 
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+* **Monorepo Management:** Powered by Turborepo and `pnpm` workspace workspaces for fast, parallelized builds and local development.
+* **Database Isolation:** Utilizes a single PostgreSQL instance but enforces a **Database-per-Service** isolation model using PostgreSQL schema namespaces (`auth` and `integration`), avoiding migration conflicts while maintaining strict service boundaries.
+* **Token-based Security:** Enforces shared JWT verification across service layers to protect inter-service requests and authorize user sessions.
