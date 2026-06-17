@@ -37,10 +37,8 @@ passport.use(
                     where: { githubId: String(profile.id) },
                 })
 
-                console.log(installation_id)
 
-                console.log(user)
-
+                // if user logging after app installation, update their installation id
                 if (installation_id && user) {
                     const updatedUser = await prisma.user.update({
                         where: { email: email },
@@ -50,8 +48,6 @@ passport.use(
                     })
                     user.installationID = updatedUser.installationID
                 }
-
-                console.log(user)
 
                 // 2. If not, register them
                 if (!user) {

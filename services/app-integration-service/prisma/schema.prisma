@@ -13,21 +13,21 @@ datasource db {
 }
 
 model Installation {
-  id          String    @id @default(uuid())
-  installationId String @unique
-  userId String 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
-  repositories Repository[]
+  id             String       @id @default(uuid())
+  installationId String       @unique
+  userId         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  repositories   Repository[]
 }
 
-model Repository{
-  id  String @id @default(uuid())
-  repo_name String @unique
-  repo_url String @unique
-  installationId String 
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Repository {
+  id             String @id @default(uuid())
+  repo_name      String @unique
+  repo_url       String @unique
+  installationId String
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
   installation Installation @relation(fields: [installationId], references: [id])
 }
