@@ -1,6 +1,10 @@
 import express from 'express'
 import { userAuth } from '../middlewares/auth.middleware.js'
-import { createInstallation, getRepository, syncRepos } from '../controller/integration.controller.js'
+import {
+  createInstallation,
+  getRepository,
+  syncRepos,
+} from '../controller/integration.controller.js'
 
 const router = express.Router()
 

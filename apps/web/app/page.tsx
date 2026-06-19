@@ -23,8 +23,23 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false)
   const [syncStatus, setSyncStatus] = useState<string>('')
   const [repos, setRepos] = useState<Repository[]>([])
-  const [scanStatus, setScanStatus] = useState<Record<string, { id: string, status: string, error?: string, findingsCount?: number, findings?: any[] }>>({})
-  const [activeRepoFindings, setActiveRepoFindings] = useState<{ repoName: string, findings: any[], error?: string } | null>(null)
+  const [scanStatus, setScanStatus] = useState<
+    Record<
+      string,
+      {
+        id: string
+        status: string
+        error?: string
+        findingsCount?: number
+        findings?: any[]
+      }
+    >
+  >({})
+  const [activeRepoFindings, setActiveRepoFindings] = useState<{
+    repoName: string
+    findings: any[]
+    error?: string
+  } | null>(null)
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -130,40 +145,49 @@ export default function Home() {
     }
   }
 
-
-
   const handleScan = async (repoId: string) => {
     if (!token) return
     setScanStatus((prev) => ({ ...prev, [repoId]: { id: '', status: 'QUEUED' } }))
 
     try {
-      const response = await fetch(`http://localhost:5002/api/secure-bot/scan/repo/${repoId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `http://localhost:5002/api/secure-bot/scan/repo/${repoId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-      })
+      )
 
       const resData = await response.json()
       if (response.ok && resData.success) {
         const scan = resData.data
         setScanStatus((prev) => ({
           ...prev,
-          [repoId]: { id: scan.id, status: scan.status }
+          [repoId]: { id: scan.id, status: scan.status },
         }))
 
         pollScanStatus(repoId, scan.id)
       } else {
         setScanStatus((prev) => ({
           ...prev,
-          [repoId]: { id: '', status: 'FAILED', error: resData.message || 'Failed to start scan' }
+          [repoId]: {
+            id: '',
+            status: 'FAILED',
+            error: resData.message || 'Failed to start scan',
+          },
         }))
       }
     } catch (err: any) {
       setScanStatus((prev) => ({
         ...prev,
-        [repoId]: { id: '', status: 'FAILED', error: err.message || 'Failed to reach scanner service' }
+        [repoId]: {
+          id: '',
+          status: 'FAILED',
+          error: err.message || 'Failed to reach scanner service',
+        },
       }))
     }
   }
@@ -171,11 +195,14 @@ export default function Home() {
   const pollScanStatus = (repoId: string, scanId: string) => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:5002/api/secure-bot/scan/status/${scanId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+        const response = await fetch(
+          `http://localhost:5002/api/secure-bot/scan/status/${scanId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           },
-        })
+        )
         const resData = await response.json()
         if (response.ok && resData.success) {
           const scan = resData.data
@@ -186,8 +213,8 @@ export default function Home() {
               status: scan.status,
               error: scan.error || undefined,
               findingsCount: scan.findings?.length || 0,
-              findings: scan.findings
-            }
+              findings: scan.findings,
+            },
           }))
 
           if (scan.status === 'SUCCESS' || scan.status === 'FAILED') {
@@ -304,25 +331,30 @@ export default function Home() {
               ) : (
                 <div style={styles.repoList}>
                   {repos.map((repo) => {
-                    const scanInfo = scanStatus[repo.id];
+                    const scanInfo = scanStatus[repo.id]
                     return (
                       <div key={repo.id} style={styles.repoItem}>
                         <div>
                           <h4 style={styles.repoName}>{repo.repo_name}</h4>
                           <span style={styles.repoDate}>
-                            Protected since: {new Date(repo.createdAt).toLocaleDateString()}
+                            Protected since:{' '}
+                            {new Date(repo.createdAt).toLocaleDateString()}
                           </span>
-                          
+
                           {/* Real-time Scan Status Badge */}
                           {scanInfo && (
                             <div style={styles.scanStatusContainer}>
-                              <span style={{
-                                ...styles.scanBadge,
-                                backgroundColor: 
-                                  scanInfo.status === 'SUCCESS' ? '#238636' :
-                                  scanInfo.status === 'FAILED' ? '#da3633' :
-                                  '#1f6feb'
-                              }}>
+                              <span
+                                style={{
+                                  ...styles.scanBadge,
+                                  backgroundColor:
+                                    scanInfo.status === 'SUCCESS'
+                                      ? '#238636'
+                                      : scanInfo.status === 'FAILED'
+                                        ? '#da3633'
+                                        : '#1f6feb',
+                                }}
+                              >
                                 Status: {scanInfo.status}
                               </span>
                               {scanInfo.status === 'SUCCESS' && (
@@ -331,37 +363,46 @@ export default function Home() {
                                 </span>
                               )}
                               {scanInfo.status === 'FAILED' && scanInfo.error && (
-                                <span style={styles.errorText}>
-                                  ({scanInfo.error})
-                                </span>
+                                <span style={styles.errorText}>({scanInfo.error})</span>
                               )}
                             </div>
                           )}
                         </div>
-                        
+
                         <div style={styles.repoActions}>
                           <button
                             onClick={() => handleScan(repo.id)}
                             disabled={
-                              scanInfo?.status === 'QUEUED' || 
+                              scanInfo?.status === 'QUEUED' ||
                               scanInfo?.status === 'IN_PROGRESS'
                             }
                             style={{
                               ...styles.scanBtn,
-                              opacity: (scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS') ? 0.6 : 1,
-                              cursor: (scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS') ? 'not-allowed' : 'pointer'
+                              opacity:
+                                scanInfo?.status === 'QUEUED' ||
+                                scanInfo?.status === 'IN_PROGRESS'
+                                  ? 0.6
+                                  : 1,
+                              cursor:
+                                scanInfo?.status === 'QUEUED' ||
+                                scanInfo?.status === 'IN_PROGRESS'
+                                  ? 'not-allowed'
+                                  : 'pointer',
                             }}
                           >
-                            {scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS' 
-                              ? 'Scanning...' 
+                            {scanInfo?.status === 'QUEUED' ||
+                            scanInfo?.status === 'IN_PROGRESS'
+                              ? 'Scanning...'
                               : '🔍 Scan Now'}
                           </button>
                           {scanInfo?.status === 'SUCCESS' && (
                             <button
-                              onClick={() => setActiveRepoFindings({
-                                repoName: repo.repo_name,
-                                findings: scanInfo?.findings || []
-                              })}
+                              onClick={() =>
+                                setActiveRepoFindings({
+                                  repoName: repo.repo_name,
+                                  findings: scanInfo?.findings || [],
+                                })
+                              }
                               style={styles.viewFindingsBtn}
                             >
                               📋 View Findings
@@ -369,11 +410,13 @@ export default function Home() {
                           )}
                           {scanInfo?.status === 'FAILED' && (
                             <button
-                              onClick={() => setActiveRepoFindings({
-                                repoName: repo.repo_name,
-                                findings: [],
-                                error: scanInfo?.error || 'Unknown scan error'
-                              })}
+                              onClick={() =>
+                                setActiveRepoFindings({
+                                  repoName: repo.repo_name,
+                                  findings: [],
+                                  error: scanInfo?.error || 'Unknown scan error',
+                                })
+                              }
                               style={styles.viewErrorBtn}
                             >
                               ⚠️ View Error
@@ -389,7 +432,7 @@ export default function Home() {
                           </a>
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               )}
@@ -403,15 +446,17 @@ export default function Home() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Security Findings: {activeRepoFindings.repoName}</h3>
-              <button 
-                onClick={() => setActiveRepoFindings(null)} 
+              <h3 style={styles.modalTitle}>
+                Security Findings: {activeRepoFindings.repoName}
+              </h3>
+              <button
+                onClick={() => setActiveRepoFindings(null)}
                 style={styles.closeModalBtn}
               >
                 ✕
               </button>
             </div>
-            
+
             <div style={styles.modalBody}>
               {activeRepoFindings.error ? (
                 <div style={styles.errorConsole}>
@@ -419,28 +464,43 @@ export default function Home() {
                   <pre style={styles.errorPre}>{activeRepoFindings.error}</pre>
                 </div>
               ) : activeRepoFindings.findings.length === 0 ? (
-                <p style={{ textAlign: 'center', opacity: 0.6 }}>No findings found for this scan.</p>
+                <p style={{ textAlign: 'center', opacity: 0.6 }}>
+                  No findings found for this scan.
+                </p>
               ) : (
                 <div style={styles.findingsList}>
                   {activeRepoFindings.findings.map((finding: any) => (
                     <div key={finding.id} style={styles.findingItem}>
                       <div style={styles.findingHeader}>
                         <span style={styles.findingTitle}>{finding.title}</span>
-                        <span style={{
-                          ...styles.severityBadge,
-                          backgroundColor: 
-                            finding.severity === 'CRITICAL' ? '#da3633' :
-                            finding.severity === 'HIGH' ? '#ff9000' :
-                            finding.severity === 'MEDIUM' ? '#e3b341' :
-                            '#388bfd'
-                        }}>
+                        <span
+                          style={{
+                            ...styles.severityBadge,
+                            backgroundColor:
+                              finding.severity === 'CRITICAL'
+                                ? '#da3633'
+                                : finding.severity === 'HIGH'
+                                  ? '#ff9000'
+                                  : finding.severity === 'MEDIUM'
+                                    ? '#e3b341'
+                                    : '#388bfd',
+                          }}
+                        >
                           {finding.severity}
                         </span>
                       </div>
                       <div style={styles.findingMeta}>
-                        <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong> {finding.filePath}{finding.line ? `:${finding.line}` : ''}
+                        <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong>{' '}
+                        {finding.filePath}
+                        {finding.line ? `:${finding.line}` : ''}
                       </div>
-                      <p style={finding.status === 'RESOLVED' ? styles.findingDescResolved : styles.findingDesc}>
+                      <p
+                        style={
+                          finding.status === 'RESOLVED'
+                            ? styles.findingDescResolved
+                            : styles.findingDesc
+                        }
+                      >
                         {finding.description}
                       </p>
                     </div>
