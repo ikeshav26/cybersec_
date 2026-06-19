@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express'
+import express from 'express'
 import { userAuth } from '../middlewares/auth.middleware.js'
 import { createInstallation, syncRepos } from '../controller/integration.controller.js'
 

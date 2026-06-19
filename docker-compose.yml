@@ -15,16 +15,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
-    depends_on:
-      - db
-    environment:
-      - ADMINER_DEFAULT_SERVER=db
-
   # redis:
   #   image: redis
   #   restart: always
