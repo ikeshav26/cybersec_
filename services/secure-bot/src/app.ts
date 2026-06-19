@@ -2,10 +2,19 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import scanRoutes from './routes/scan.routes.js'
+import cors from 'cors'
+
 
 dotenv.config()
 
 const app: express.Express = express()
+
+app.use(
+    cors({
+        origin: process.env.CLIENT_URL || 'http://localhost:3000',
+        credentials: true,
+    }),
+)
 
 
 app.use(express.json())

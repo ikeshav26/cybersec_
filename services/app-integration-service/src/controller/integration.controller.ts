@@ -99,3 +99,64 @@ export const syncRepos = async (req: Request, res: Response) => {
     console.log(err)
   }
 }
+
+
+export const getRepository = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized',
+      })
+    }
+
+    const { repoId } = req.params
+    if (!repoId) {
+      return res.status(400).json({
+        success: false,
+        message: 'repoId is required to fetch the repository.',
+      })
+    }
+
+    const id = String(repoId)
+
+
+    const repo = await prisma.repository.findUnique({
+      where: {
+        id: id
+      },
+      include: {
+        installation: true
+      }
+    })
+
+    if (!repo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Repository not found'
+      })
+    }
+
+    if (repo.installation.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Repository fetched successfully',
+      data: {
+        id: repo.id,
+        repo_name: repo.repo_name,
+        repo_url: repo.repo_url,
+        installationId: repo.installation.installationId
+      }
+    })
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: "Failed to fetch repositories" })
+  }
+}

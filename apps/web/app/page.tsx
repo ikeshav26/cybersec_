@@ -23,6 +23,8 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false)
   const [syncStatus, setSyncStatus] = useState<string>('')
   const [repos, setRepos] = useState<Repository[]>([])
+  const [scanStatus, setScanStatus] = useState<Record<string, { id: string, status: string, error?: string, findingsCount?: number, findings?: any[] }>>({})
+  const [activeRepoFindings, setActiveRepoFindings] = useState<{ repoName: string, findings: any[] } | null>(null)
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -128,6 +130,78 @@ export default function Home() {
     }
   }
 
+
+
+  const handleScan = async (repoId: string) => {
+    if (!token) return
+    setScanStatus((prev) => ({ ...prev, [repoId]: { id: '', status: 'QUEUED' } }))
+
+    try {
+      const response = await fetch(`http://localhost:5002/api/secure-bot/scan/repo/${repoId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const resData = await response.json()
+      if (response.ok && resData.success) {
+        const scan = resData.data
+        setScanStatus((prev) => ({
+          ...prev,
+          [repoId]: { id: scan.id, status: scan.status }
+        }))
+
+        pollScanStatus(repoId, scan.id)
+      } else {
+        setScanStatus((prev) => ({
+          ...prev,
+          [repoId]: { id: '', status: 'FAILED', error: resData.message || 'Failed to start scan' }
+        }))
+      }
+    } catch (err: any) {
+      setScanStatus((prev) => ({
+        ...prev,
+        [repoId]: { id: '', status: 'FAILED', error: err.message || 'Failed to reach scanner service' }
+      }))
+    }
+  }
+
+  const pollScanStatus = (repoId: string, scanId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:5002/api/secure-bot/scan/status/${scanId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+        const resData = await response.json()
+        if (response.ok && resData.success) {
+          const scan = resData.data
+          setScanStatus((prev) => ({
+            ...prev,
+            [repoId]: {
+              id: scanId,
+              status: scan.status,
+              error: scan.error || undefined,
+              findingsCount: scan.findings?.length || 0,
+              findings: scan.findings
+            }
+          }))
+
+          if (scan.status === 'SUCCESS' || scan.status === 'FAILED') {
+            clearInterval(interval)
+          }
+        } else {
+          clearInterval(interval)
+        }
+      } catch (err) {
+        clearInterval(interval)
+      }
+    }, 2000)
+  }
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -181,14 +255,16 @@ export default function Home() {
 
               <div style={styles.actionContainer}>
                 {/* Button to install GitHub App */}
-                <a
-                  href="https://github.com/apps/cybersuite-app/installations/new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.actionBtnInstall}
-                >
-                  🚀 Install GitHub App
-                </a>
+                {!user.installationID && (
+                  <a
+                    href="https://github.com/apps/cybersuite-app/installations/new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.actionBtnInstall}
+                  >
+                    🚀 Install GitHub App
+                  </a>
+                )}
 
                 {/* Button to sync repositories */}
                 <button
@@ -234,15 +310,70 @@ export default function Home() {
                         <span style={styles.repoDate}>
                           Protected since: {new Date(repo.createdAt).toLocaleDateString()}
                         </span>
+                        
+                        {/* Real-time Scan Status Badge */}
+                        {scanStatus[repo.id] && (
+                          <div style={styles.scanStatusContainer}>
+                            <span style={{
+                              ...styles.scanBadge,
+                              backgroundColor: 
+                                scanStatus[repo.id].status === 'SUCCESS' ? '#238636' :
+                                scanStatus[repo.id].status === 'FAILED' ? '#da3633' :
+                                '#1f6feb'
+                            }}>
+                              Status: {scanStatus[repo.id].status}
+                            </span>
+                            {scanStatus[repo.id].status === 'SUCCESS' && (
+                              <span style={styles.findingsCount}>
+                                ⚠️ {scanStatus[repo.id].findingsCount} issues found
+                              </span>
+                            )}
+                            {scanStatus[repo.id].status === 'FAILED' && scanStatus[repo.id].error && (
+                              <span style={styles.errorText}>
+                                ({scanStatus[repo.id].error})
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <a
-                        href={repo.repo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={styles.repoLink}
-                      >
-                        Open on GitHub ↗
-                      </a>
+                      
+                      <div style={styles.repoActions}>
+                        <button
+                          onClick={() => handleScan(repo.id)}
+                          disabled={
+                            scanStatus[repo.id]?.status === 'QUEUED' || 
+                            scanStatus[repo.id]?.status === 'IN_PROGRESS'
+                          }
+                          style={{
+                            ...styles.scanBtn,
+                            opacity: (scanStatus[repo.id]?.status === 'QUEUED' || scanStatus[repo.id]?.status === 'IN_PROGRESS') ? 0.6 : 1,
+                            cursor: (scanStatus[repo.id]?.status === 'QUEUED' || scanStatus[repo.id]?.status === 'IN_PROGRESS') ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {scanStatus[repo.id]?.status === 'QUEUED' || scanStatus[repo.id]?.status === 'IN_PROGRESS' 
+                            ? 'Scanning...' 
+                            : '🔍 Scan Now'}
+                        </button>
+                        {scanStatus[repo.id]?.status === 'SUCCESS' && (
+                          <button
+                            onClick={() => setActiveRepoFindings({
+                              repoName: repo.repo_name,
+                              findings: scanStatus[repo.id].findings || []
+                            })}
+                            style={styles.viewFindingsBtn}
+                          >
+                            📋 View Findings
+                          </button>
+                        )}
+                        <a
+                          href={repo.repo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={styles.repoLink}
+                        >
+                          Open on GitHub ↗
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -251,6 +382,55 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Findings Modal */}
+      {activeRepoFindings && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Security Findings: {activeRepoFindings.repoName}</h3>
+              <button 
+                onClick={() => setActiveRepoFindings(null)} 
+                style={styles.closeModalBtn}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={styles.modalBody}>
+              {activeRepoFindings.findings.length === 0 ? (
+                <p style={{ textAlign: 'center', opacity: 0.6 }}>No findings found for this scan.</p>
+              ) : (
+                <div style={styles.findingsList}>
+                  {activeRepoFindings.findings.map((finding: any) => (
+                    <div key={finding.id} style={styles.findingItem}>
+                      <div style={styles.findingHeader}>
+                        <span style={styles.findingTitle}>{finding.title}</span>
+                        <span style={{
+                          ...styles.severityBadge,
+                          backgroundColor: 
+                            finding.severity === 'CRITICAL' ? '#da3633' :
+                            finding.severity === 'HIGH' ? '#ff9000' :
+                            finding.severity === 'MEDIUM' ? '#e3b341' :
+                            '#388bfd'
+                        }}>
+                          {finding.severity}
+                        </span>
+                      </div>
+                      <div style={styles.findingMeta}>
+                        <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong> {finding.filePath}{finding.line ? `:${finding.line}` : ''}
+                      </div>
+                      <p style={finding.status === 'RESOLVED' ? styles.findingDescResolved : styles.findingDesc}>
+                        {finding.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -486,5 +666,146 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: 'none',
     fontSize: '14px',
     fontWeight: 'bold',
+  },
+  repoActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+  },
+  scanBtn: {
+    padding: '8px 16px',
+    backgroundColor: '#1f6feb',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+  },
+  scanStatusContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginTop: '8px',
+  },
+  scanBadge: {
+    padding: '3px 8px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textTransform: 'uppercase',
+  },
+  findingsCount: {
+    fontSize: '12px',
+    color: '#ff9000',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    fontSize: '12px',
+    color: '#f85149',
+  },
+  viewFindingsBtn: {
+    padding: '8px 12px',
+    backgroundColor: 'transparent',
+    color: '#388bfd',
+    border: '1px solid #388bfd',
+    borderRadius: '6px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'background 0.2s',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '85vh',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 24px',
+    borderBottom: '1px solid #30363d',
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: '18px',
+    color: '#ffffff',
+  },
+  closeModalBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#c9d1d9',
+    fontSize: '20px',
+    cursor: 'pointer',
+  },
+  modalBody: {
+    padding: '24px',
+    overflowY: 'auto',
+  },
+  findingsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  findingItem: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    padding: '16px',
+  },
+  findingHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '8px',
+  },
+  findingTitle: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  severityBadge: {
+    padding: '3px 8px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  findingMeta: {
+    fontSize: '13px',
+    opacity: 0.6,
+    marginBottom: '8px',
+  },
+  findingDesc: {
+    margin: 0,
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#c9d1d9',
+  },
+  findingDescResolved: {
+    margin: 0,
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#8b949e',
+    textDecoration: 'line-through',
   },
 }
