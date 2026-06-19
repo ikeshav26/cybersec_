@@ -3,10 +3,13 @@ import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import scanRoutes from './routes/scan.routes.js'
 import cors from 'cors'
+import { connectRedis } from './config/redis.js'
 
 dotenv.config()
 
 const app: express.Express = express()
+
+connectRedis();
 
 app.use(
   cors({

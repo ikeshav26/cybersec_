@@ -6,6 +6,7 @@ import fs from 'fs'
 import { getFindingsBySemgrep } from './scans/semgrep.scan.js'
 import { getFindingByTrivy } from './scans/trivy.scan.js'
 
+
 export async function runBackgroundScan(
   scanId: string,
   repoUrl: string,
@@ -28,33 +29,17 @@ export async function runBackgroundScan(
     console.log(`Cloning repository for scanId:${scanId}:`)
     await cloneRepo(repoUrl, clonePath)
 
-    console.log(`Running gitleaks for scanId:${scanId}:`)
-    const gitleaksFindings = await getFindingByGitleaks(scanId, clonePath)
+    const [gitleaks, semgrep, trivy] = await Promise.all([
+      getFindingByGitleaks(scanId, clonePath),
+      getFindingsBySemgrep(scanId, clonePath),
+      getFindingByTrivy(scanId, clonePath),
+    ])
 
-    console.log(`Creating findings for scanId:${scanId}:`)
-    if (gitleaksFindings.length > 0) {
+    const findings = [...gitleaks, ...semgrep, ...trivy]
+
+    if (findings.length > 0) {
       await prisma.finding.createMany({
-        data: gitleaksFindings,
-      })
-    }
-
-    console.log(`Running semgrep for scanId:${scanId}:`)
-    const semgrepFindings = await getFindingsBySemgrep(scanId, clonePath)
-
-    console.log(`Creating findings for scanId:${scanId}:`)
-    if (semgrepFindings.length > 0) {
-      await prisma.finding.createMany({
-        data: semgrepFindings,
-      })
-    }
-
-    console.log(`Running trivy for scanId:${scanId}:`)
-    const trivyFindings = await getFindingByTrivy(scanId, clonePath)
-
-    console.log(`Creating findings for scanId:${scanId}:`)
-    if (trivyFindings.length > 0) {
-      await prisma.finding.createMany({
-        data: trivyFindings,
+        data: findings,
       })
     }
 

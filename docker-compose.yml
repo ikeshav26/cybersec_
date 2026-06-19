@@ -13,6 +13,19 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    
+
   gitleaks:
     image: ghcr.io/gitleaks/gitleaks:latest
     volumes:

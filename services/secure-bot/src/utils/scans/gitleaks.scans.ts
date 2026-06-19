@@ -4,7 +4,7 @@ import { asyncExec } from '../exec.js'
 
 export const getFindingByGitleaks = async (scanId: string, repoPath: string) => {
   const reportPath = path.join(repoPath, 'gitleaks.json')
-
+  console.log('gitleaks started at:', new Date())
   try {
     await asyncExec(`
       docker run --rm \
@@ -38,5 +38,7 @@ export const getFindingByGitleaks = async (scanId: string, repoPath: string) => 
   } catch (err) {
     console.log(err)
     return []
+  } finally {
+    console.log("gitleak finished at:", new Date())
   }
 }
