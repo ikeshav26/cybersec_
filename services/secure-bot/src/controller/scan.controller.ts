@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import { prisma } from '../config/db.js'
 import axios from 'axios'
 import { runBackgroundScan } from '../utils/background-scanner.js'
+import { scanQueue } from '../queues/scan.queue.js'
 
 export const scanRepo = async (req: Request, res: Response) => {
   try {
@@ -46,10 +47,14 @@ export const scanRepo = async (req: Request, res: Response) => {
     })
 
     //step-3
-    setImmediate(() => {
-      runBackgroundScan(scan.id, repo.repo_url, repo.installationId).catch((err) => {
-        console.log(`Background Scan failed for scanId:${scan.id}`, err)
-      })
+
+    console.log("Adding to queue : ", scan)
+
+    await scanQueue.add("repo-scan", {
+      scanId: scan.id,
+      repoId: repo.id,
+      repoUrl: repo.repo_url,
+      installationId: repo.installationId,
     })
 
     return res.status(202).json({
