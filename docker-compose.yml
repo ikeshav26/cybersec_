@@ -18,5 +18,11 @@ services:
     volumes:
       - shared-scans:/scans
 
+  semgrep:
+    image: semgrep/semgrep:latest
+    volumes:
+      - shared-scans:/scans
+
+
 volumes:
   shared-scans:

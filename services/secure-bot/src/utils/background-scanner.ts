@@ -3,6 +3,7 @@ import { prisma } from "../config/db.js"
 import { cloneRepo } from "./clone-repo.js"
 import { getFindingByGitleaks } from "./scans/gitleaks.scans.js"
 import fs from "fs"
+import { getFindingsBySemgrep } from "./scans/semgrep.scan.js"
 
 export async function runBackgroundScan(scanId: string, repoUrl: string, installationId: string) {
     console.log(`Starting scan for scanId:${scanId}:`)
@@ -29,6 +30,16 @@ export async function runBackgroundScan(scanId: string, repoUrl: string, install
         if (gitleaksFindings.length > 0) {
             await prisma.finding.createMany({
                 data: gitleaksFindings
+            })
+        }
+
+        console.log(`Running semgrep for scanId:${scanId}:`)
+        const semgrepFindings = await getFindingsBySemgrep(scanId, clonePath)
+
+        console.log(`Creating findings for scanId:${scanId}:`)
+        if (semgrepFindings.length > 0) {
+            await prisma.finding.createMany({
+                data: semgrepFindings
             })
         }
 
