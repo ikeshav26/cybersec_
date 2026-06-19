@@ -1,14 +1,27 @@
 import { Worker } from "bullmq";
 import { runBackgroundScan } from "../utils/background-scanner.js";
-import { redis } from "../config/redis.js";
+import { redisConnectionOptions } from "../config/redis.js";
 
 
-new Worker("scan-queue", async job => {
+export const worker = new Worker("scan-queue", async job => {
     console.log("received by worker")
     const { scanId, repoId, repoUrl, installationId } = job.data;
     await runBackgroundScan(scanId, repoUrl, installationId);
     console.log("finished by worker")
 }, {
-    connection: redis as any,
+    connection: redisConnectionOptions,
     concurrency: 4
 })
+
+worker.on("failed", (job, err) => {
+    console.error(`Job ${job?.id} failed with error: ${err.message}`);
+});
+
+
+const shutdown = async (signal: string) => {
+    console.log(`Received ${signal}. Shutting down worker gracefully...`);
+    await worker.close();
+    process.exit(0);
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
