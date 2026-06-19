@@ -4,6 +4,9 @@ import { cloneRepo } from "./clone-repo.js"
 import { getFindingByGitleaks } from "./scans/gitleaks.scans.js"
 import fs from "fs"
 import { getFindingsBySemgrep } from "./scans/semgrep.scan.js"
+import { getFindingByTrivy } from "./scans/trivy.scan.js"
+
+
 
 export async function runBackgroundScan(scanId: string, repoUrl: string, installationId: string) {
     console.log(`Starting scan for scanId:${scanId}:`)
@@ -40,6 +43,16 @@ export async function runBackgroundScan(scanId: string, repoUrl: string, install
         if (semgrepFindings.length > 0) {
             await prisma.finding.createMany({
                 data: semgrepFindings
+            })
+        }
+
+        console.log(`Running trivy for scanId:${scanId}:`)
+        const trivyFindings = await getFindingByTrivy(scanId, clonePath)
+
+        console.log(`Creating findings for scanId:${scanId}:`)
+        if (trivyFindings.length > 0) {
+            await prisma.finding.createMany({
+                data: trivyFindings
             })
         }
 

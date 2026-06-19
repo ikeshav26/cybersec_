@@ -23,6 +23,11 @@ services:
     volumes:
       - shared-scans:/scans
 
+  trivy:
+    image: aquasec/trivy:latest
+    volumes:
+      - shared-scans:/scans
+
 
 volumes:
   shared-scans:
