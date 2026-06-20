@@ -3,14 +3,14 @@ import { runBackgroundScan } from "../utils/background-scanner.js";
 import { redisConnectionOptions } from "../config/redis.js";
 
 
-export const worker = new Worker("scan-queue", async job => {
+export const worker = new Worker("scan-queue", async (job) => {
     console.log("received by worker")
     const { scanId, repoId, repoUrl, installationId } = job.data;
     await runBackgroundScan(scanId, repoUrl, installationId);
     console.log("finished by worker")
 }, {
     connection: redisConnectionOptions,
-    concurrency: 4
+    concurrency: 3
 })
 
 worker.on("failed", (job, err) => {
