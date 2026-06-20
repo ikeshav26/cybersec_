@@ -3,6 +3,7 @@ import 'dotenv/config'
 import express from 'express'
 import type { Application, Request, Response } from 'express'
 import integrationRoutes from './routes/integration.routes.js'
+import githubWebhookRoutes from './routes/github.routes.js'
 import cors from 'cors'
 
 const app: Application = express()
@@ -21,5 +22,6 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 app.use('/api/v1', integrationRoutes)
+app.use('/api/v1/github', githubWebhookRoutes)
 
 export default app

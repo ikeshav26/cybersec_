@@ -293,6 +293,18 @@ export default function Home() {
                   </a>
                 )}
 
+                {/* Button to configure GitHub App repositories */}
+                {user.installationID && (
+                  <a
+                    href={`https://github.com/settings/installations/${user.installationID}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.actionBtnConfigure}
+                  >
+                    ⚙️ Configure Repositories
+                  </a>
+                )}
+
                 {/* Button to sync repositories */}
                 <button
                   onClick={() => handleSync(false)}
@@ -673,6 +685,19 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     cursor: 'pointer',
     transition: 'background 0.2s',
+  },
+  actionBtnConfigure: {
+    display: 'block',
+    textAlign: 'center',
+    padding: '12px',
+    backgroundColor: '#21262d',
+    color: '#58a6ff',
+    textDecoration: 'none',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   actionBtnSync: {
     padding: '12px',

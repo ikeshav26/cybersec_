@@ -99,3 +99,37 @@ export const getScanStatus = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+
+export const removeRepoScanAndFindings = async (req: Request, res: Response) => {
+  try {
+    const { repoId } = req.params;
+
+    if (!repoId) {
+      return res.status(400).json({ message: "Please provide repoId" })
+    }
+
+    const id = String(repoId)
+
+    console.log("Deleting findings for repoId:", id)
+    await prisma.finding.deleteMany({
+      where: {
+        scan: {
+          repositoryId: id
+        }
+      }
+    })
+
+    console.log("Deleting scans for repoId:", id)
+    await prisma.scan.deleteMany({
+      where: {
+        repositoryId: id
+      }
+    })
+
+    return res.status(200).json({ message: "Scans and findings deleted successfully" })
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
