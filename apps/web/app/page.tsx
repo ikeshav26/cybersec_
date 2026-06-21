@@ -40,6 +40,20 @@ export default function Home() {
     findings: any[]
     error?: string
   } | null>(null)
+  const [fixingFindingId, setFixingFindingId] = useState<string | null>(null)
+  const [fixResults, setFixResults] = useState<
+    Record<
+      string,
+      {
+        explanation: string
+        code: string
+      }
+    >
+  >({})
+  const [expandedFixIds, setExpandedFixIds] = useState<Record<string, boolean>>({})
+  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
+  const [fixingAll, setFixingAll] = useState(false)
+  const [bulkFixResults, setBulkFixResults] = useState<any[] | null>(null)
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -86,6 +100,13 @@ export default function Home() {
       handleSync(true) // Quiet check of existing repos
     }
   }, [user, token])
+
+  useEffect(() => {
+    setSelectedFindingIds([])
+    setBulkFixResults(null)
+    setFixResults({})
+    setExpandedFixIds({})
+  }, [activeRepoFindings])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -227,6 +248,96 @@ export default function Home() {
         clearInterval(interval)
       }
     }, 2000)
+  }
+
+  const handleToggleFixResult = (findingId: string) => {
+    setExpandedFixIds((prev) => ({
+      ...prev,
+      [findingId]: !prev[findingId],
+    }))
+  }
+
+  const handleFixFinding = async (findingId: string) => {
+    if (!token) return
+    setFixingFindingId(findingId)
+    try {
+      const response = await fetch(`http://localhost:5002/api/secure-bot/fix/finding/${findingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      const resData = await response.json()
+      if (response.ok) {
+        setFixResults((prev) => ({
+          ...prev,
+          [findingId]: {
+            explanation: resData.explanation,
+            code: resData.code,
+          },
+        }))
+        setExpandedFixIds((prev) => ({
+          ...prev,
+          [findingId]: true,
+        }))
+        // Update status of this finding in the list
+        if (activeRepoFindings) {
+          const updatedFindings = activeRepoFindings.findings.map((f: any) =>
+            f.id === findingId ? { ...f, status: 'RESOLVED' } : f
+          )
+          setActiveRepoFindings({
+            ...activeRepoFindings,
+            findings: updatedFindings,
+          })
+        }
+      } else {
+        alert(resData.message || 'Failed to apply fix')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to connect to backend')
+    } finally {
+      setFixingFindingId(null)
+    }
+  }
+
+  const handleFixSelected = async () => {
+    if (!token || selectedFindingIds.length === 0) return
+    setFixingAll(true)
+    setBulkFixResults(null)
+    try {
+      const response = await fetch(`http://localhost:5002/api/secure-bot/fix/findings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          findingIds: selectedFindingIds
+        })
+      })
+      const resData = await response.json()
+      if (response.ok) {
+        setBulkFixResults(resData.results || [])
+        // Update status of all fixed findings in the list
+        if (activeRepoFindings) {
+          const updatedFindings = activeRepoFindings.findings.map((f: any) =>
+            selectedFindingIds.includes(f.id) ? { ...f, status: 'RESOLVED' } : f
+          )
+          setActiveRepoFindings({
+            ...activeRepoFindings,
+            findings: updatedFindings,
+          })
+        }
+        setSelectedFindingIds([])
+      } else {
+        alert(resData.message || 'Failed to apply fixes')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to connect to backend')
+    } finally {
+      setFixingAll(false)
+    }
   }
 
   return (
@@ -392,18 +503,18 @@ export default function Home() {
                               ...styles.scanBtn,
                               opacity:
                                 scanInfo?.status === 'QUEUED' ||
-                                scanInfo?.status === 'IN_PROGRESS'
+                                  scanInfo?.status === 'IN_PROGRESS'
                                   ? 0.6
                                   : 1,
                               cursor:
                                 scanInfo?.status === 'QUEUED' ||
-                                scanInfo?.status === 'IN_PROGRESS'
+                                  scanInfo?.status === 'IN_PROGRESS'
                                   ? 'not-allowed'
                                   : 'pointer',
                             }}
                           >
                             {scanInfo?.status === 'QUEUED' ||
-                            scanInfo?.status === 'IN_PROGRESS'
+                              scanInfo?.status === 'IN_PROGRESS'
                               ? 'Scanning...'
                               : '🔍 Scan Now'}
                           </button>
@@ -480,43 +591,213 @@ export default function Home() {
                   No findings found for this scan.
                 </p>
               ) : (
-                <div style={styles.findingsList}>
-                  {activeRepoFindings.findings.map((finding: any) => (
-                    <div key={finding.id} style={styles.findingItem}>
-                      <div style={styles.findingHeader}>
-                        <span style={styles.findingTitle}>{finding.title}</span>
-                        <span
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Bulk Fix Results */}
+                  {bulkFixResults && (
+                    <div style={{ padding: '16px', backgroundColor: '#161b22', border: '1px solid #2ea44f', borderRadius: '8px', marginBottom: '8px' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#56d364', fontSize: '15px' }}>✓ Bulk Fixes Applied</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {bulkFixResults.map((res: any, idx: number) => (
+                          <div key={idx} style={{ borderBottom: idx < bulkFixResults.length - 1 ? '1px solid #21262d' : 'none', paddingBottom: '10px' }}>
+                            <strong style={{ color: '#58a6ff', fontSize: '13px' }}>File: {res.filePath}</strong>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#c9d1d9' }}>{res.explanation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bulk actions section */}
+                  {activeRepoFindings.findings.some(f => f.status !== 'RESOLVED') && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#0d1117', border: '1px solid #30363d', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={
+                            activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').length > 0 &&
+                            activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').every(f => selectedFindingIds.includes(f.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const unresolvedIds = activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').map(f => f.id)
+                              setSelectedFindingIds(unresolvedIds)
+                            } else {
+                              setSelectedFindingIds([])
+                            }
+                          }}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '14px', color: '#c9d1d9', fontWeight: 'bold' }}>Select All Unresolved</span>
+                      </div>
+
+                      {selectedFindingIds.length > 0 && (
+                        <button
+                          onClick={handleFixSelected}
+                          disabled={fixingAll}
                           style={{
-                            ...styles.severityBadge,
-                            backgroundColor:
-                              finding.severity === 'CRITICAL'
-                                ? '#da3633'
-                                : finding.severity === 'HIGH'
-                                  ? '#ff9000'
-                                  : finding.severity === 'MEDIUM'
-                                    ? '#e3b341'
-                                    : '#388bfd',
+                            padding: '8px 16px',
+                            backgroundColor: '#238636',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
                           }}
                         >
-                          {finding.severity}
-                        </span>
-                      </div>
-                      <div style={styles.findingMeta}>
-                        <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong>{' '}
-                        {finding.filePath}
-                        {finding.line ? `:${finding.line}` : ''}
-                      </div>
-                      <p
-                        style={
-                          finding.status === 'RESOLVED'
-                            ? styles.findingDescResolved
-                            : styles.findingDesc
-                        }
-                      >
-                        {finding.description}
-                      </p>
+                          {fixingAll ? 'Fixing Selected...' : `Fix Selected (${selectedFindingIds.length})`}
+                        </button>
+                      )}
                     </div>
-                  ))}
+                  )}
+
+                  <div style={styles.findingsList}>
+                    {activeRepoFindings.findings.map((finding: any) => (
+                      <div key={finding.id} style={styles.findingItem}>
+                        <div style={styles.findingHeader}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {finding.status !== 'RESOLVED' && (
+                              <input
+                                type="checkbox"
+                                checked={selectedFindingIds.includes(finding.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedFindingIds(prev => [...prev, finding.id])
+                                  } else {
+                                    setSelectedFindingIds(prev => prev.filter(id => id !== finding.id))
+                                  }
+                                }}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                              />
+                            )}
+                            <span style={styles.findingTitle}>{finding.title}</span>
+                          </div>
+                          <span
+                            style={{
+                              ...styles.severityBadge,
+                              backgroundColor:
+                                finding.severity === 'CRITICAL'
+                                  ? '#da3633'
+                                  : finding.severity === 'HIGH'
+                                    ? '#ff9000'
+                                    : finding.severity === 'MEDIUM'
+                                      ? '#e3b341'
+                                      : '#388bfd',
+                            }}
+                          >
+                            {finding.severity}
+                          </span>
+                        </div>
+                        <div style={styles.findingMeta}>
+                          <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong>{' '}
+                          {finding.filePath}
+                          {finding.line ? `:${finding.line}` : ''}
+                        </div>
+                        <p
+                          style={
+                            finding.status === 'RESOLVED'
+                              ? styles.findingDescResolved
+                              : styles.findingDesc
+                          }
+                        >
+                          {finding.description}
+                        </p>
+
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          {finding.status !== 'RESOLVED' ? (
+                            <button
+                              onClick={() => handleFixFinding(finding.id)}
+                              disabled={fixingFindingId === finding.id}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#238636',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
+                            </button>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '13px', color: '#56d364', fontWeight: 'bold', marginRight: '5px' }}>
+                                ✓ Fixed
+                              </span>
+                              <button
+                                onClick={() => {
+                                  if (fixResults[finding.id]) {
+                                    handleToggleFixResult(finding.id)
+                                  } else {
+                                    handleFixFinding(finding.id)
+                                  }
+                                }}
+                                disabled={fixingFindingId === finding.id}
+                                style={{
+                                  padding: '5px 10px',
+                                  backgroundColor: 'transparent',
+                                  color: '#58a6ff',
+                                  border: '1px solid #30363d',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {fixingFindingId === finding.id
+                                  ? 'Fetching...'
+                                  : expandedFixIds[finding.id]
+                                    ? 'Hide Fix Details'
+                                    : 'View Fix Details'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        {fixResults[finding.id] && expandedFixIds[finding.id] && (
+                          <div style={styles.fixResultContainer}>
+                            <div style={styles.fixResultHeader}>
+                              <span style={styles.fixResultTitle}>💡 Suggested Security Fix</span>
+                              <button
+                                onClick={() => handleToggleFixResult(finding.id)}
+                                style={styles.closeFixBtn}
+                                title="Close fix panel"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            <div style={styles.fixResultExplanation}>
+                              <h5 style={styles.fixSectionSubTitle}>Explanation</h5>
+                              <p style={styles.fixExplanationText}>
+                                {fixResults[finding.id]!.explanation}
+                              </p>
+                            </div>
+
+                            <div style={styles.fixResultCodeContainer}>
+                              <div style={styles.codeHeaderRow}>
+                                <h5 style={styles.fixSectionSubTitle}>Fixed Code</h5>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(fixResults[finding.id]!.code);
+                                    alert("Fixed code copied to clipboard!");
+                                  }}
+                                  style={styles.copyCodeBtn}
+                                >
+                                  📋 Copy Code
+                                </button>
+                              </div>
+                              <pre style={styles.codePreBlock}>
+                                <code>{fixResults[finding.id]?.code}</code>
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -942,6 +1223,92 @@ const styles: Record<string, React.CSSProperties> = {
     wordBreak: 'break-all',
     fontSize: '13px',
     maxHeight: '400px',
+    overflowY: 'auto',
+  },
+  fixResultContainer: {
+    marginTop: '16px',
+    padding: '16px',
+    backgroundColor: '#161b22',
+    borderRadius: '8px',
+    border: '1px solid #30363d',
+    borderLeft: '4px solid #2ea44f',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  fixResultHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #21262d',
+    paddingBottom: '8px',
+  },
+  fixResultTitle: {
+    color: '#56d364',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  },
+  closeFixBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#8b949e',
+    fontSize: '14px',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    transition: 'background 0.2s, color 0.2s',
+  },
+  fixResultExplanation: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  fixSectionSubTitle: {
+    margin: 0,
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    color: '#8b949e',
+    letterSpacing: '0.5px',
+  },
+  fixExplanationText: {
+    margin: 0,
+    fontSize: '13px',
+    lineHeight: '1.5',
+    color: '#c9d1d9',
+  },
+  fixResultCodeContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  codeHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  copyCodeBtn: {
+    padding: '3px 8px',
+    backgroundColor: '#21262d',
+    color: '#c9d1d9',
+    border: '1px solid #30363d',
+    borderRadius: '4px',
+    fontSize: '11px',
+    cursor: 'pointer',
+    transition: 'background 0.2s, color 0.2s',
+  },
+  codePreBlock: {
+    margin: 0,
+    padding: '12px',
+    backgroundColor: '#0d1117',
+    border: '1px solid #21262d',
+    borderRadius: '6px',
+    overflowX: 'auto',
+    fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
+    fontSize: '12px',
+    lineHeight: '1.4',
+    color: '#c9d1d9',
+    maxHeight: '300px',
     overflowY: 'auto',
   },
 }

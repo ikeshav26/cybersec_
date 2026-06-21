@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import scanRoutes from './routes/scan.routes.js'
+import fixRoutes from './routes/fix.routes.js'
 import cors from 'cors'
 
 dotenv.config()
@@ -26,5 +27,6 @@ app.get('/', (req, res) => {
 })
 
 app.use('/api/secure-bot/scan', scanRoutes)
+app.use('/api/secure-bot/fix', fixRoutes)
 
 export default app
