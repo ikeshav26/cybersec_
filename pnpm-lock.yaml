@@ -317,6 +317,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
+      octokit:
+        specifier: ^5.0.5
+        version: 5.0.5
       pg:
         specifier: ^8.22.0
         version: 8.22.0

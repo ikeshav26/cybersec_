@@ -38,6 +38,7 @@ export default function Home() {
   const [activeRepoFindings, setActiveRepoFindings] = useState<{
     repoName: string
     findings: any[]
+    scanId?: string
     error?: string
   } | null>(null)
   const [fixingFindingId, setFixingFindingId] = useState<string | null>(null)
@@ -54,6 +55,8 @@ export default function Home() {
   const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
   const [fixingAll, setFixingAll] = useState(false)
   const [bulkFixResults, setBulkFixResults] = useState<any[] | null>(null)
+  const [openingPR, setOpeningPR] = useState(false)
+  const [prUrl, setPrUrl] = useState<string | null>(null)
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -106,6 +109,8 @@ export default function Home() {
     setBulkFixResults(null)
     setFixResults({})
     setExpandedFixIds({})
+    setPrUrl(null)
+    setOpeningPR(false)
   }, [activeRepoFindings])
 
   const handleLogout = () => {
@@ -328,6 +333,34 @@ export default function Home() {
             ...activeRepoFindings,
             findings: updatedFindings,
           })
+
+          // Save the results into fixResults for each individual finding card!
+          const newFixResults = { ...fixResults }
+          const newExpandedFixIds = { ...expandedFixIds }
+
+          if (resData.results && Array.isArray(resData.results)) {
+            const sanitizePath = (p: string) => p.replace(/^\/?(repo|src)\//, "");
+
+            resData.results.forEach((res: any) => {
+              const resSanitized = sanitizePath(res.filePath);
+
+              activeRepoFindings.findings.forEach((f: any) => {
+                if (selectedFindingIds.includes(f.id)) {
+                  const fSanitized = sanitizePath(f.filePath);
+                  if (fSanitized === resSanitized) {
+                    newFixResults[f.id] = {
+                      explanation: res.explanation,
+                      code: res.fixedCode
+                    };
+                    newExpandedFixIds[f.id] = true;
+                  }
+                }
+              });
+            });
+          }
+
+          setFixResults(newFixResults)
+          setExpandedFixIds(newExpandedFixIds)
         }
         setSelectedFindingIds([])
       } else {
@@ -337,6 +370,36 @@ export default function Home() {
       alert(err.message || 'Failed to connect to backend')
     } finally {
       setFixingAll(false)
+    }
+  }
+
+  const handleOpenPR = async () => {
+    if (!token || !activeRepoFindings?.scanId) {
+      alert('Missing authentication token or active scan ID.')
+      return
+    }
+    setOpeningPR(true)
+    setPrUrl(null)
+    try {
+      const response = await fetch(`http://localhost:5002/api/secure-bot/fix/open-pr/${activeRepoFindings.scanId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const resData = await response.json()
+      if (response.ok && resData.pr) {
+        setPrUrl(resData.pr.html_url)
+        alert('Pull Request opened successfully!')
+      } else {
+        alert(resData.message || 'Failed to open Pull Request')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to connect to backend')
+    } finally {
+      setOpeningPR(false)
     }
   }
 
@@ -524,6 +587,7 @@ export default function Home() {
                                 setActiveRepoFindings({
                                   repoName: repo.repo_name,
                                   findings: scanInfo?.findings || [],
+                                  scanId: scanInfo?.id || '',
                                 })
                               }
                               style={styles.viewFindingsBtn}
@@ -592,15 +656,86 @@ export default function Home() {
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Bulk Fix Results */}
+                  {/* Pull Request Actions Banner (Visible whenever there are fixed/resolved findings) */}
+                  {activeRepoFindings.findings.some(f => f.status === 'RESOLVED') && (
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: '#161b22',
+                      border: '1px solid #30363d',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ flex: 1, marginRight: '16px' }}>
+                          <h4 style={{ margin: 0, color: '#56d364', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            🛡️ Security Fixes Ready
+                          </h4>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#c9d1d9' }}>
+                            Vulnerabilities have been successfully resolved by secure-bot. Click below to open a Pull Request on GitHub to review and merge the fixes.
+                          </p>
+                        </div>
+                        <div>
+                          {prUrl ? (
+                            <a
+                              href={prUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#238636',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                textDecoration: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-block',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              🎉 View Pull Request ↗
+                            </a>
+                          ) : (
+                            <button
+                              onClick={handleOpenPR}
+                              disabled={openingPR}
+                              style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#1f6feb',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                opacity: openingPR ? 0.6 : 1
+                              }}
+                            >
+                              {openingPR ? 'Opening PR...' : '🚀 Open Pull Request'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bulk Fix Results Code Review Panel */}
                   {bulkFixResults && (
-                    <div style={{ padding: '16px', backgroundColor: '#161b22', border: '1px solid #2ea44f', borderRadius: '8px', marginBottom: '8px' }}>
-                      <h4 style={{ margin: '0 0 10px 0', color: '#56d364', fontSize: '15px' }}>✓ Bulk Fixes Applied</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '200px', overflowY: 'auto' }}>
+                    <div style={{ padding: '16px', backgroundColor: '#161b22', border: '1px solid #2ea44f', borderRadius: '8px', marginBottom: '16px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#56d364', fontSize: '15px' }}>✓ Bulk Fixes Generated by Secure-Bot</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '350px', overflowY: 'auto' }}>
                         {bulkFixResults.map((res: any, idx: number) => (
-                          <div key={idx} style={{ borderBottom: idx < bulkFixResults.length - 1 ? '1px solid #21262d' : 'none', paddingBottom: '10px' }}>
+                          <div key={idx} style={{ borderBottom: idx < bulkFixResults.length - 1 ? '1px solid #21262d' : 'none', paddingBottom: '12px' }}>
                             <strong style={{ color: '#58a6ff', fontSize: '13px' }}>File: {res.filePath}</strong>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#c9d1d9' }}>{res.explanation}</p>
+                            <p style={{ margin: '4px 0 8px 0', fontSize: '12px', color: '#8b949e' }}>{res.explanation}</p>
+                            <pre style={{ ...styles.codePreBlock, maxHeight: '150px', overflowY: 'auto' }}>
+                              <code>{res.fixedCode}</code>
+                            </pre>
                           </div>
                         ))}
                       </div>
