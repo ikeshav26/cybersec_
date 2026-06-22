@@ -3,9 +3,6 @@ import { githubWebhookController } from '../controller/github.controller.js'
 
 const router = express.Router()
 
-
 router.post('/webhook', githubWebhookController)
 
-
-
-export default router;
+export default router

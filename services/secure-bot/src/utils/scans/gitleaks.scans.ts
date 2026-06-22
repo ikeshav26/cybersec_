@@ -39,6 +39,6 @@ export const getFindingByGitleaks = async (scanId: string, repoPath: string) => 
     console.log(err)
     return []
   } finally {
-    console.log("gitleak finished at:", new Date())
+    console.log('gitleak finished at:', new Date())
   }
 }

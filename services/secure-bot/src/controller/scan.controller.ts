@@ -48,9 +48,9 @@ export const scanRepo = async (req: Request, res: Response) => {
 
     //step-3
 
-    console.log("Adding to queue : ", scan)
+    console.log('Adding to queue : ', scan)
 
-    await scanQueue.add("repo-scan", {
+    await scanQueue.add('repo-scan', {
       scanId: scan.id,
       repoId: repo.id,
       repoUrl: repo.repo_url,
@@ -100,36 +100,35 @@ export const getScanStatus = async (req: Request, res: Response) => {
   }
 }
 
-
 export const removeRepoScanAndFindings = async (req: Request, res: Response) => {
   try {
-    const { repoId } = req.params;
+    const { repoId } = req.params
 
     if (!repoId) {
-      return res.status(400).json({ message: "Please provide repoId" })
+      return res.status(400).json({ message: 'Please provide repoId' })
     }
 
     const id = String(repoId)
 
-    console.log("Deleting findings for repoId:", id)
+    console.log('Deleting findings for repoId:', id)
     await prisma.finding.deleteMany({
       where: {
         scan: {
-          repositoryId: id
-        }
-      }
+          repositoryId: id,
+        },
+      },
     })
 
-    console.log("Deleting scans for repoId:", id)
+    console.log('Deleting scans for repoId:', id)
     await prisma.scan.deleteMany({
       where: {
-        repositoryId: id
-      }
+        repositoryId: id,
+      },
     })
 
-    return res.status(200).json({ message: "Scans and findings deleted successfully" })
+    return res.status(200).json({ message: 'Scans and findings deleted successfully' })
   } catch (err) {
     console.log(err)
-    return res.status(500).json({ message: "Internal server error" })
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }

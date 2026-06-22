@@ -20,7 +20,7 @@ const mapSeverity = (severity: string): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' =
 
 export const getFindingsBySemgrep = async (scanId: string, repoPath: string) => {
   const reportPath = path.join(repoPath, 'semgrep.json')
-  console.log("semgrep starts at:", new Date())
+  console.log('semgrep starts at:', new Date())
   try {
     await asyncExec(`
             docker run --rm \
@@ -61,6 +61,6 @@ export const getFindingsBySemgrep = async (scanId: string, repoPath: string) => 
     console.error('Failed to read/parse Semgrep report:', err)
     return []
   } finally {
-    console.log("semgrep finished at:", new Date())
+    console.log('semgrep finished at:', new Date())
   }
 }

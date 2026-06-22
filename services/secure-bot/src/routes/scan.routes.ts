@@ -1,5 +1,9 @@
 import express from 'express'
-import { getScanStatus, removeRepoScanAndFindings, scanRepo } from '../controller/scan.controller.js'
+import {
+  getScanStatus,
+  removeRepoScanAndFindings,
+  scanRepo,
+} from '../controller/scan.controller.js'
 import { userAuth } from '../middlewares/auth.middleware.js'
 
 const router: express.Router = express.Router()

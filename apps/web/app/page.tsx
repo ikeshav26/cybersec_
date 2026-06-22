@@ -266,13 +266,16 @@ export default function Home() {
     if (!token) return
     setFixingFindingId(findingId)
     try {
-      const response = await fetch(`http://localhost:5002/api/secure-bot/fix/finding/${findingId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `http://localhost:5002/api/secure-bot/fix/finding/${findingId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-      })
+      )
       const resData = await response.json()
       if (response.ok) {
         setFixResults((prev) => ({
@@ -289,7 +292,7 @@ export default function Home() {
         // Update status of this finding in the list
         if (activeRepoFindings) {
           const updatedFindings = activeRepoFindings.findings.map((f: any) =>
-            f.id === findingId ? { ...f, status: 'RESOLVED' } : f
+            f.id === findingId ? { ...f, status: 'RESOLVED' } : f,
           )
           setActiveRepoFindings({
             ...activeRepoFindings,
@@ -318,8 +321,8 @@ export default function Home() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          findingIds: selectedFindingIds
-        })
+          findingIds: selectedFindingIds,
+        }),
       })
       const resData = await response.json()
       if (response.ok) {
@@ -327,7 +330,7 @@ export default function Home() {
         // Update status of all fixed findings in the list
         if (activeRepoFindings) {
           const updatedFindings = activeRepoFindings.findings.map((f: any) =>
-            selectedFindingIds.includes(f.id) ? { ...f, status: 'RESOLVED' } : f
+            selectedFindingIds.includes(f.id) ? { ...f, status: 'RESOLVED' } : f,
           )
           setActiveRepoFindings({
             ...activeRepoFindings,
@@ -339,24 +342,24 @@ export default function Home() {
           const newExpandedFixIds = { ...expandedFixIds }
 
           if (resData.results && Array.isArray(resData.results)) {
-            const sanitizePath = (p: string) => p.replace(/^\/?(repo|src)\//, "");
+            const sanitizePath = (p: string) => p.replace(/^\/?(repo|src)\//, '')
 
             resData.results.forEach((res: any) => {
-              const resSanitized = sanitizePath(res.filePath);
+              const resSanitized = sanitizePath(res.filePath)
 
               activeRepoFindings.findings.forEach((f: any) => {
                 if (selectedFindingIds.includes(f.id)) {
-                  const fSanitized = sanitizePath(f.filePath);
+                  const fSanitized = sanitizePath(f.filePath)
                   if (fSanitized === resSanitized) {
                     newFixResults[f.id] = {
                       explanation: res.explanation,
-                      code: res.fixedCode
-                    };
-                    newExpandedFixIds[f.id] = true;
+                      code: res.fixedCode,
+                    }
+                    newExpandedFixIds[f.id] = true
                   }
                 }
-              });
-            });
+              })
+            })
           }
 
           setFixResults(newFixResults)
@@ -381,13 +384,16 @@ export default function Home() {
     setOpeningPR(true)
     setPrUrl(null)
     try {
-      const response = await fetch(`http://localhost:5002/api/secure-bot/pr/open-pr/${activeRepoFindings.scanId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `http://localhost:5002/api/secure-bot/pr/open-pr/${activeRepoFindings.scanId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-      })
+      )
 
       const resData = await response.json()
       if (response.ok && resData.pr) {
@@ -566,18 +572,18 @@ export default function Home() {
                               ...styles.scanBtn,
                               opacity:
                                 scanInfo?.status === 'QUEUED' ||
-                                  scanInfo?.status === 'IN_PROGRESS'
+                                scanInfo?.status === 'IN_PROGRESS'
                                   ? 0.6
                                   : 1,
                               cursor:
                                 scanInfo?.status === 'QUEUED' ||
-                                  scanInfo?.status === 'IN_PROGRESS'
+                                scanInfo?.status === 'IN_PROGRESS'
                                   ? 'not-allowed'
                                   : 'pointer',
                             }}
                           >
                             {scanInfo?.status === 'QUEUED' ||
-                              scanInfo?.status === 'IN_PROGRESS'
+                            scanInfo?.status === 'IN_PROGRESS'
                               ? 'Scanning...'
                               : '🔍 Scan Now'}
                           </button>
@@ -657,24 +663,49 @@ export default function Home() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Pull Request Actions Banner (Visible whenever there are fixed/resolved findings) */}
-                  {activeRepoFindings.findings.some(f => f.status === 'RESOLVED') && (
-                    <div style={{
-                      padding: '16px',
-                      backgroundColor: '#161b22',
-                      border: '1px solid #30363d',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {activeRepoFindings.findings.some((f) => f.status === 'RESOLVED') && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: '#161b22',
+                        border: '1px solid #30363d',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <div style={{ flex: 1, marginRight: '16px' }}>
-                          <h4 style={{ margin: 0, color: '#56d364', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <h4
+                            style={{
+                              margin: 0,
+                              color: '#56d364',
+                              fontSize: '15px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
                             🛡️ Security Fixes Ready
                           </h4>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#c9d1d9' }}>
-                            Vulnerabilities have been successfully resolved by secure-bot. Click below to open a Pull Request on GitHub to review and merge the fixes.
+                          <p
+                            style={{
+                              margin: '4px 0 0 0',
+                              fontSize: '13px',
+                              color: '#c9d1d9',
+                            }}
+                          >
+                            Vulnerabilities have been successfully resolved by secure-bot.
+                            Click below to open a Pull Request on GitHub to review and
+                            merge the fixes.
                           </p>
                         </div>
                         <div>
@@ -694,7 +725,7 @@ export default function Home() {
                                 textDecoration: 'none',
                                 cursor: 'pointer',
                                 display: 'inline-block',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               🎉 View Pull Request ↗
@@ -713,7 +744,7 @@ export default function Home() {
                                 fontWeight: 'bold',
                                 cursor: 'pointer',
                                 whiteSpace: 'nowrap',
-                                opacity: openingPR ? 0.6 : 1
+                                opacity: openingPR ? 0.6 : 1,
                               }}
                             >
                               {openingPR ? 'Opening PR...' : '🚀 Open Pull Request'}
@@ -726,14 +757,63 @@ export default function Home() {
 
                   {/* Bulk Fix Results Code Review Panel */}
                   {bulkFixResults && (
-                    <div style={{ padding: '16px', backgroundColor: '#161b22', border: '1px solid #2ea44f', borderRadius: '8px', marginBottom: '16px' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#56d364', fontSize: '15px' }}>✓ Bulk Fixes Generated by Secure-Bot</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '350px', overflowY: 'auto' }}>
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: '#161b22',
+                        border: '1px solid #2ea44f',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: '0 0 12px 0',
+                          color: '#56d364',
+                          fontSize: '15px',
+                        }}
+                      >
+                        ✓ Bulk Fixes Generated by Secure-Bot
+                      </h4>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                          maxHeight: '350px',
+                          overflowY: 'auto',
+                        }}
+                      >
                         {bulkFixResults.map((res: any, idx: number) => (
-                          <div key={idx} style={{ borderBottom: idx < bulkFixResults.length - 1 ? '1px solid #21262d' : 'none', paddingBottom: '12px' }}>
-                            <strong style={{ color: '#58a6ff', fontSize: '13px' }}>File: {res.filePath}</strong>
-                            <p style={{ margin: '4px 0 8px 0', fontSize: '12px', color: '#8b949e' }}>{res.explanation}</p>
-                            <pre style={{ ...styles.codePreBlock, maxHeight: '150px', overflowY: 'auto' }}>
+                          <div
+                            key={idx}
+                            style={{
+                              borderBottom:
+                                idx < bulkFixResults.length - 1
+                                  ? '1px solid #21262d'
+                                  : 'none',
+                              paddingBottom: '12px',
+                            }}
+                          >
+                            <strong style={{ color: '#58a6ff', fontSize: '13px' }}>
+                              File: {res.filePath}
+                            </strong>
+                            <p
+                              style={{
+                                margin: '4px 0 8px 0',
+                                fontSize: '12px',
+                                color: '#8b949e',
+                              }}
+                            >
+                              {res.explanation}
+                            </p>
+                            <pre
+                              style={{
+                                ...styles.codePreBlock,
+                                maxHeight: '150px',
+                                overflowY: 'auto',
+                              }}
+                            >
                               <code>{res.fixedCode}</code>
                             </pre>
                           </div>
@@ -743,18 +823,34 @@ export default function Home() {
                   )}
 
                   {/* Bulk actions section */}
-                  {activeRepoFindings.findings.some(f => f.status !== 'RESOLVED') && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#0d1117', border: '1px solid #30363d', borderRadius: '8px' }}>
+                  {activeRepoFindings.findings.some((f) => f.status !== 'RESOLVED') && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        backgroundColor: '#0d1117',
+                        border: '1px solid #30363d',
+                        borderRadius: '8px',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="checkbox"
                           checked={
-                            activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').length > 0 &&
-                            activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').every(f => selectedFindingIds.includes(f.id))
+                            activeRepoFindings.findings.filter(
+                              (f) => f.status !== 'RESOLVED',
+                            ).length > 0 &&
+                            activeRepoFindings.findings
+                              .filter((f) => f.status !== 'RESOLVED')
+                              .every((f) => selectedFindingIds.includes(f.id))
                           }
                           onChange={(e) => {
                             if (e.target.checked) {
-                              const unresolvedIds = activeRepoFindings.findings.filter(f => f.status !== 'RESOLVED').map(f => f.id)
+                              const unresolvedIds = activeRepoFindings.findings
+                                .filter((f) => f.status !== 'RESOLVED')
+                                .map((f) => f.id)
                               setSelectedFindingIds(unresolvedIds)
                             } else {
                               setSelectedFindingIds([])
@@ -762,7 +858,15 @@ export default function Home() {
                           }}
                           style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                         />
-                        <span style={{ fontSize: '14px', color: '#c9d1d9', fontWeight: 'bold' }}>Select All Unresolved</span>
+                        <span
+                          style={{
+                            fontSize: '14px',
+                            color: '#c9d1d9',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          Select All Unresolved
+                        </span>
                       </div>
 
                       {selectedFindingIds.length > 0 && (
@@ -780,7 +884,9 @@ export default function Home() {
                             cursor: 'pointer',
                           }}
                         >
-                          {fixingAll ? 'Fixing Selected...' : `Fix Selected (${selectedFindingIds.length})`}
+                          {fixingAll
+                            ? 'Fixing Selected...'
+                            : `Fix Selected (${selectedFindingIds.length})`}
                         </button>
                       )}
                     </div>
@@ -790,19 +896,27 @@ export default function Home() {
                     {activeRepoFindings.findings.map((finding: any) => (
                       <div key={finding.id} style={styles.findingItem}>
                         <div style={styles.findingHeader}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+                          >
                             {finding.status !== 'RESOLVED' && (
                               <input
                                 type="checkbox"
                                 checked={selectedFindingIds.includes(finding.id)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedFindingIds(prev => [...prev, finding.id])
+                                    setSelectedFindingIds((prev) => [...prev, finding.id])
                                   } else {
-                                    setSelectedFindingIds(prev => prev.filter(id => id !== finding.id))
+                                    setSelectedFindingIds((prev) =>
+                                      prev.filter((id) => id !== finding.id),
+                                    )
                                   }
                                 }}
-                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  cursor: 'pointer',
+                                }}
                               />
                             )}
                             <span style={styles.findingTitle}>{finding.title}</span>
@@ -824,8 +938,8 @@ export default function Home() {
                           </span>
                         </div>
                         <div style={styles.findingMeta}>
-                          <strong>Tool:</strong> {finding.tool} | <strong>Location:</strong>{' '}
-                          {finding.filePath}
+                          <strong>Tool:</strong> {finding.tool} |{' '}
+                          <strong>Location:</strong> {finding.filePath}
                           {finding.line ? `:${finding.line}` : ''}
                         </div>
                         <p
@@ -838,7 +952,14 @@ export default function Home() {
                           {finding.description}
                         </p>
 
-                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div
+                          style={{
+                            marginTop: '12px',
+                            display: 'flex',
+                            gap: '10px',
+                            alignItems: 'center',
+                          }}
+                        >
                           {finding.status !== 'RESOLVED' ? (
                             <button
                               onClick={() => handleFixFinding(finding.id)}
@@ -858,7 +979,14 @@ export default function Home() {
                             </button>
                           ) : (
                             <>
-                              <span style={{ fontSize: '13px', color: '#56d364', fontWeight: 'bold', marginRight: '5px' }}>
+                              <span
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#56d364',
+                                  fontWeight: 'bold',
+                                  marginRight: '5px',
+                                }}
+                              >
                                 ✓ Fixed
                               </span>
                               <button
@@ -894,7 +1022,9 @@ export default function Home() {
                         {fixResults[finding.id] && expandedFixIds[finding.id] && (
                           <div style={styles.fixResultContainer}>
                             <div style={styles.fixResultHeader}>
-                              <span style={styles.fixResultTitle}>💡 Suggested Security Fix</span>
+                              <span style={styles.fixResultTitle}>
+                                💡 Suggested Security Fix
+                              </span>
                               <button
                                 onClick={() => handleToggleFixResult(finding.id)}
                                 style={styles.closeFixBtn}
@@ -916,8 +1046,10 @@ export default function Home() {
                                 <h5 style={styles.fixSectionSubTitle}>Fixed Code</h5>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(fixResults[finding.id]!.code);
-                                    alert("Fixed code copied to clipboard!");
+                                    navigator.clipboard.writeText(
+                                      fixResults[finding.id]!.code,
+                                    )
+                                    alert('Fixed code copied to clipboard!')
                                   }}
                                   style={styles.copyCodeBtn}
                                 >

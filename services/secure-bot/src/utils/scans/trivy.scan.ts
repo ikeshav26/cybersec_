@@ -22,7 +22,7 @@ const mapSeverity = (
 
 export const getFindingByTrivy = async (scanId: string, repoPath: string) => {
   const reportPath = path.join(repoPath, 'trivy.json')
-  console.log("trivy starts at:", new Date())
+  console.log('trivy starts at:', new Date())
   try {
     await asyncExec(`
             docker run --rm \
@@ -64,6 +64,6 @@ export const getFindingByTrivy = async (scanId: string, repoPath: string) => {
     console.error('Error reading/parsing Trivy report:', err)
     return []
   } finally {
-    console.log("trivy finished at:", new Date())
+    console.log('trivy finished at:', new Date())
   }
 }

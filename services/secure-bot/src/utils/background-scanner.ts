@@ -6,7 +6,6 @@ import fs from 'fs'
 import { getFindingsBySemgrep } from './scans/semgrep.scan.js'
 import { getFindingByTrivy } from './scans/trivy.scan.js'
 
-
 export async function runBackgroundScan(
   scanId: string,
   repoUrl: string,
