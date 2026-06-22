@@ -1,10 +1,9 @@
 import type { Request, Response } from "express";
-import { prisma } from "../config/db.js";
-import axios from "axios";
 import { cloneRepo } from "../utils/clone-repo.js";
 import fs from 'fs'
-import { getCodeFix, getMultipleCodeFixes } from "../config/ai.js";
+import { getCodeFix } from "../config/ai.js";
 import path from 'path'
+import { getFindingById, getFindings, getFindingsByFile, getRepoFromRepoID, readAndWrittingFixesBack, updateFindingStatus } from "../utils/fixes/helper.js";
 
 
 
@@ -19,19 +18,7 @@ export const fixFinding = async (req: Request, res: Response) => {
         console.log("Finding id received:", id, " Now finding..Finding for id:", id)
 
         //step-1 (fetching finding details)
-        const finding = await prisma.finding.findUnique({
-            where: {
-                id: id,
-            },
-            include: {
-                scan: {
-                    select: {
-                        id: true,
-                        repositoryId: true
-                    }
-                }
-            }
-        })
+        const finding = await getFindingById(id);
 
         if (!finding) {
             return res.status(404).json({ message: "Finding not found" })
@@ -40,20 +27,10 @@ export const fixFinding = async (req: Request, res: Response) => {
         console.log("Findings received, going to clone repo...")
 
         //step-2 (cloning-repo)
-        const authHeader = req.headers.authorization;
-        const cookieHeader = req.headers.cookie;
-        const headers: Record<string, string> = {};
-        if (authHeader) {
-            headers['Authorization'] = authHeader;
+        const repo = await getRepoFromRepoID(req, finding.scan.repositoryId)
+        if (!repo) {
+            return res.status(400).json({ message: "Could not get repo details" })
         }
-        if (cookieHeader) {
-            headers['Cookie'] = cookieHeader;
-        }
-
-        const repo = await axios.get(
-            `${process.env.APP_INTEGRATION_SERVICE_URL}/api/v1/repos/${finding.scan.repositoryId}`,
-            { headers }
-        )
         const repoUrl = repo.data.data.repo_url;
 
         const clonePath = path.join(process.cwd(), "fixes", finding.scan.id);
@@ -61,7 +38,6 @@ export const fixFinding = async (req: Request, res: Response) => {
             await fs.promises.rm(clonePath, { recursive: true, force: true });
         }
         await cloneRepo(repoUrl, clonePath);
-
 
         console.log("Cloning complete to path: ", clonePath)
 
@@ -82,8 +58,8 @@ export const fixFinding = async (req: Request, res: Response) => {
 
         console.log("Extracting content by reading file done..")
 
-        //step-4 (fixes by gemini)
-        console.log("Now fixing code... using gemini")
+        //step-4 (fixes by model)
+        console.log("Now fixing code... using models")
         const { explanation, fixedCode } = await getCodeFix(finding, content, context)
 
         if (!explanation || !fixedCode) {
@@ -98,10 +74,10 @@ export const fixFinding = async (req: Request, res: Response) => {
         await fs.promises.writeFile(fixedFilePath, fixedCode, "utf-8")
 
         // Update status in DB
-        await prisma.finding.update({
-            where: { id: finding.id },
-            data: { status: "RESOLVED" }
-        })
+        const isUpdated = await updateFindingStatus([finding.id]);
+        if (!isUpdated) {
+            return res.status(400).json({ message: "Failed to update finding status" })
+        }
 
         return res.status(200).json({ message: "Fix applied successfully", code: fixedCode, explanation: explanation })
     } catch (err) {
@@ -118,111 +94,45 @@ export const fixAllFindings = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "findingIds array is required" })
         }
 
-        // Map findingIds to string array whether they are [{id: "..."}] or ["..."]
-        const ids = findingIds.map((item: any) => typeof item === 'object' && item !== null ? String(item.id) : String(item));
-
-        console.log("Retrieving findings for IDs:", ids);
-        const findings = await prisma.finding.findMany({
-            where: {
-                id: { in: ids }
-            },
-            include: {
-                scan: {
-                    select: {
-                        id: true,
-                        repositoryId: true
-                    }
-                }
-            }
-        });
-
-        if (findings.length === 0) {
+        // step-1 (get findings from ids)
+        const { findings, ids } = await getFindings(findingIds);
+        if (!findings || findings.length === 0) {
             return res.status(404).json({ message: "No findings found for provided IDs" })
         }
-
         const firstFinding = findings[0];
-        console.log("Findings received, going to clone repo for scan:", firstFinding!.scan.id)
+        console.log("Findings received, going to clone repo for scan:", firstFinding?.scan.id)
 
-        //clone-repo
-        const authHeader = req.headers.authorization;
-        const cookieHeader = req.headers.cookie;
-        const headers: Record<string, string> = {};
-        if (authHeader) {
-            headers['Authorization'] = authHeader;
-        }
-        if (cookieHeader) {
-            headers['Cookie'] = cookieHeader;
-        }
 
-        const repo = await axios.get(
-            `${process.env.APP_INTEGRATION_SERVICE_URL}/api/v1/repos/${firstFinding!.scan.repositoryId}`,
-            { headers }
-        )
+
+        //setp-2 (clone-repo to make fixes)
+        const repo = await getRepoFromRepoID(req, firstFinding!.scan.repositoryId)
+        if (!repo) {
+            return res.status(400).json({ message: "Could not get repo details" })
+        }
         const repoUrl = repo.data.data.repo_url;
-
         const clonePath = path.join(process.cwd(), "fixes", firstFinding!.scan.id);
         if (fs.existsSync(clonePath)) {
             await fs.promises.rm(clonePath, { recursive: true, force: true });
         }
         await cloneRepo(repoUrl, clonePath);
-
         console.log("Cloning complete to path: ", clonePath)
 
-        // Group findings by filePath (sanitized)
-        const findingsByFile: Record<string, typeof findings> = {};
-        for (const f of findings) {
-            const sanitizedPath = f.filePath.replace(/^\/?(repo|src)\//, "");
-            if (!findingsByFile[sanitizedPath]) {
-                findingsByFile[sanitizedPath] = [];
-            }
-            findingsByFile[sanitizedPath].push(f);
+
+
+        //step-3 (reading files and writting fixes back to files)
+        const findingsByFile = await getFindingsByFile(findings)
+        if (!findingsByFile) {
+            return res.status(400).json({ message: "Could not get findings by file" })
         }
-
-        const results = [];
-
-        // For each file, read content, get multiple code fixes from Gemini, write back to file
-        for (const [sanitizedPath, fileFindings] of Object.entries(findingsByFile)) {
-            const targetFile = path.join(clonePath, sanitizedPath);
-            let fileContent = "";
-            try {
-                fileContent = await fs.promises.readFile(targetFile, 'utf-8');
-            } catch (e) {
-                console.error(`Failed to read file ${targetFile}:`, e);
-                continue;
-            }
-
-            console.log(`Getting fixes for file ${sanitizedPath} with ${fileFindings.length} findings...`);
-            const { explanation, fixedCode } = await getMultipleCodeFixes(
-                sanitizedPath,
-                fileContent,
-                fileFindings.map(f => ({
-                    title: f.title,
-                    description: f.description,
-                    line: f.line ?? 1
-                }))
-            );
-
-            console.log("Got fixes by gemini for all findings.. Now writting back to repo..")
-
-            // Backup original file
-            await fs.promises.copyFile(targetFile, `${targetFile}.bak`);
-            // Write the fixed file content back to the cloned repo
-            await fs.promises.writeFile(targetFile, fixedCode, 'utf-8');
-
-            results.push({
-                filePath: sanitizedPath,
-                explanation,
-                fixedCode
-            });
-        }
-
+        const results = await readAndWrittingFixesBack(findingsByFile, clonePath);
         console.log("Updations done..Updating findings status to Resolved..")
 
-        // Update findings to RESOLVED status in db
-        await prisma.finding.updateMany({
-            where: { id: { in: ids } },
-            data: { status: "RESOLVED" }
-        });
+        // step-4 (update finding status)
+        const isUpdated = await updateFindingStatus(ids);
+        if (!isUpdated) {
+            return res.status(400).json({ message: "Failed to update findings status" })
+        }
+
 
         return res.status(200).json({
             message: "All fixes applied successfully",
