@@ -381,7 +381,7 @@ export default function Home() {
     setOpeningPR(true)
     setPrUrl(null)
     try {
-      const response = await fetch(`http://localhost:5002/api/secure-bot/fix/open-pr/${activeRepoFindings.scanId}`, {
+      const response = await fetch(`http://localhost:5002/api/secure-bot/pr/open-pr/${activeRepoFindings.scanId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

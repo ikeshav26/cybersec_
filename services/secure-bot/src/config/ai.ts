@@ -1,7 +1,48 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import OpenAI from 'openai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const client = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY!
+});
 
+function cleanJsonResponse(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, "");
+    cleaned = cleaned.replace(/\s*```$/, "");
+  }
+  return cleaned.trim();
+}
+
+async function callOpenRouterWithFallback(messages: { role: 'system' | 'user' | 'assistant'; content: string }[]): Promise<string> {
+  const models = [
+    'google/gemma-4-31b-it:free',
+    'qwen/qwen3-coder:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'openrouter/free'
+  ];
+
+  let lastError: any = null;
+  for (const model of models) {
+    try {
+      console.log(`[OpenRouter] Attempting completion with model: ${model}`);
+      const response = await client.chat.completions.create({
+        model,
+        messages,
+      });
+      const text = response.choices[0]?.message?.content;
+      if (text) {
+        console.log(`[OpenRouter] Successfully got response from model: ${model}`);
+        return text;
+      }
+    } catch (error: any) {
+      console.warn(`[OpenRouter] Model ${model} failed or rate-limited:`, error.message || error);
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("All fallback models failed to return a response.");
+}
 
 interface Finding {
   title: string;
@@ -37,38 +78,19 @@ Return ONLY JSON matching this schema:
 }
 `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          explanation: {
-            type: Type.STRING,
-            description: "Explanation of the finding and how to fix it."
-          },
-          targetContent: {
-            type: Type.STRING,
-            description: "The EXACT lines of code from the context that need to be replaced. Must match character-for-character including exact indentation."
-          },
-          replacementContent: {
-            type: Type.STRING,
-            description: "The corrected version of targetContent."
-          }
-        },
-        required: ["explanation", "targetContent", "replacementContent"]
-      }
+  const text = await callOpenRouterWithFallback([
+    {
+      role: "system",
+      content: "You are a senior security engineer. You must return only a valid JSON object matching the requested schema."
+    },
+    {
+      role: "user",
+      content: prompt
     }
-  });
+  ]);
 
-  const text = response.text;
-  if (!text) {
-    throw new Error("No response text from Gemini");
-  }
-
-  const parsed = JSON.parse(text);
+  const cleanedText = cleanJsonResponse(text);
+  const parsed = JSON.parse(cleanedText);
   const target = parsed.targetContent ?? "";
   const replacement = parsed.replacementContent ?? "";
 
@@ -139,48 +161,19 @@ Return ONLY JSON matching this schema:
 }
 `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          explanation: {
-            type: Type.STRING,
-            description: "Detailed explanation of all the fixes applied to the file."
-          },
-          edits: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                targetContent: {
-                  type: Type.STRING,
-                  description: "The EXACT lines of code from the file that need to be replaced. Must match character-for-character including exact indentation."
-                },
-                replacementContent: {
-                  type: Type.STRING,
-                  description: "The corrected version of targetContent."
-                }
-              },
-              required: ["targetContent", "replacementContent"]
-            },
-            description: "List of individual edits to apply to the file."
-          }
-        },
-        required: ["explanation", "edits"]
-      }
+  const text = await callOpenRouterWithFallback([
+    {
+      role: "system",
+      content: "You are a senior security engineer. You must return only a valid JSON object matching the requested schema."
+    },
+    {
+      role: "user",
+      content: prompt
     }
-  });
+  ]);
 
-  const text = response.text;
-  if (!text) {
-    throw new Error("No response text from Gemini");
-  }
-
-  const parsed = JSON.parse(text);
+  const cleanedText = cleanJsonResponse(text);
+  const parsed = JSON.parse(cleanedText);
   let updatedCode = fileContent.replace(/\r\n/g, "\n");
   if (parsed.edits && Array.isArray(parsed.edits)) {
     for (const edit of parsed.edits) {
