@@ -129,6 +129,12 @@ importers:
       '@tsconfig/node22':
         specifier: ^22.0.5
         version: 22.0.5
+      '@types/cookie-parser':
+        specifier: ^1.4.10
+        version: 1.4.10(@types/express@5.0.6)
+      cookie-parser:
+        specifier: ^1.4.7
+        version: 1.4.7
       cors:
         specifier: ^2.8.6
         version: 2.8.6
@@ -141,12 +147,21 @@ importers:
       express-rate-limit:
         specifier: ^8.5.2
         version: 8.5.2(express@5.2.1)
+      helmet:
+        specifier: ^8.2.0
+        version: 8.2.0
       http-proxy-middleware:
         specifier: ^4.1.1
         version: 4.1.1
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
+      rate-limit-redis:
+        specifier: ^5.0.0
+        version: 5.0.0(express-rate-limit@8.5.2(express@5.2.1))
     devDependencies:
       '@types/cors':
         specifier: ^2.8.19
@@ -2075,6 +2090,10 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
+  helmet@8.2.0:
+    resolution: {integrity: sha512-DRgTIUgnWcJ62KyarxxziuqYxKGnR6Rgg19BlbucN/dpmJbl1XOit6qvoOX0ZT+HhWe5OUVhU/a1zpGyc1xA0Q==}
+    engines: {node: '>=18.0.0'}
+
   hono@4.12.25:
     resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
     engines: {node: '>=16.9.0'}
@@ -2764,6 +2783,12 @@ packages:
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
+
+  rate-limit-redis@5.0.0:
+    resolution: {integrity: sha512-+M9el8KZjZ2HXM6/E38jFGmozBbN4C200iLE8+80TgS+8PzSfAAvD1zkx2oWu6YEgSrdiJJNrd4LCFm5vjVJkg==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express-rate-limit: '>= 8.5.0'
 
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
@@ -5079,6 +5104,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  helmet@8.2.0: {}
+
   hono@4.12.25: {}
 
   http-errors@2.0.1:
@@ -5805,6 +5832,10 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   range-parser@1.2.1: {}
+
+  rate-limit-redis@5.0.0(express-rate-limit@8.5.2(express@5.2.1)):
+    dependencies:
+      express-rate-limit: 8.5.2(express@5.2.1)
 
   raw-body@3.0.2:
     dependencies:
