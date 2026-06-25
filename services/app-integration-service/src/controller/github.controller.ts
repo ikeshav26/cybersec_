@@ -47,16 +47,17 @@ export const githubWebhookController = async (req: Request, res: Response) => {
 
 
     if (action === 'opened') {
+      console.log("Pr open event received..")
       const repoName = repository.full_name;
       const prNumber = pull_request.number;
 
-      const repo = await prisma.repository.findUnique({
+      const repo = await prisma.repository.findFirst({
         where: {
           repo_name: repoName,
           installation: {
-            installationId: installation.id
-          }
-        }
+            installationId: String(installation.id),
+          },
+        },
       })
 
       if (!repo) {
@@ -72,9 +73,11 @@ export const githubWebhookController = async (req: Request, res: Response) => {
         process.env.JWT_SECRET as string,
       )
 
+      console.log("Sending pr review request to secure-bot service....")
       await axios.post(
         `${process.env.SECURE_BOT_SERVICE_URL}/api/secure-bot/review/pr`,
         {
+          installationId: installation.id,
           repoName,
           prNumber,
         },

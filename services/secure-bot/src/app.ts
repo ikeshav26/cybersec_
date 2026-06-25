@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import scanRoutes from './routes/scan.routes.js'
 import fixRoutes from './routes/fix.routes.js'
+import reviewerRoutes from './routes/prReviewer.routes.js'
 import prRoutes from './routes/PR.routes.js'
 import cors from 'cors'
 
@@ -27,5 +28,6 @@ app.get('/', (req, res) => {
 app.use('/api/secure-bot/scan', scanRoutes)
 app.use('/api/secure-bot/fix', fixRoutes)
 app.use('/api/secure-bot/pr', prRoutes)
+app.use('/api/secure-bot/review', reviewerRoutes)
 
 export default app
