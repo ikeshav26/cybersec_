@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { App, Octokit } from "octokit"
+import { App } from "octokit"
 import { getPrReviewsByDiffs } from "../config/ai.js";
 
 
