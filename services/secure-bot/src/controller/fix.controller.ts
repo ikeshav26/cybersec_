@@ -87,13 +87,11 @@ export const fixFinding = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Failed to update finding status' })
     }
 
-    return res
-      .status(200)
-      .json({
-        message: 'Fix applied successfully',
-        code: fixedCode,
-        explanation: explanation,
-      })
+    return res.status(200).json({
+      message: 'Fix applied successfully',
+      code: fixedCode,
+      explanation: explanation,
+    })
   } catch (err) {
     console.log(err)
     return res.status(500).json({ message: 'Internal server error' })

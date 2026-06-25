@@ -25,7 +25,6 @@ app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Auth Service is healthy' })
 })
 
-
 app.use('/api/auth', authRoutes)
 
 export default app

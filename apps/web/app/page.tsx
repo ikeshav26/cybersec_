@@ -58,7 +58,9 @@ export default function Home() {
   const [bulkFixResults, setBulkFixResults] = useState<any[] | null>(null)
   const [openingPR, setOpeningPR] = useState(false)
   const [prUrl, setPrUrl] = useState<string | null>(null)
-  const [togglingPrReviewer, setTogglingPrReviewer] = useState<Record<string, boolean>>({})
+  const [togglingPrReviewer, setTogglingPrReviewer] = useState<Record<string, boolean>>(
+    {},
+  )
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -421,14 +423,12 @@ export default function Home() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       )
       const resData = await response.json()
       if (response.ok) {
         setRepos((prev) =>
-          prev.map((r) =>
-            r.id === repoId ? { ...r, prReviewer: !r.prReviewer } : r
-          )
+          prev.map((r) => (r.id === repoId ? { ...r, prReviewer: !r.prReviewer } : r)),
         )
       } else {
         alert(resData.message || 'Failed to toggle PR reviewer status')
@@ -593,7 +593,9 @@ export default function Home() {
 
                           {/* Auto PR Reviewer Toggle Switch */}
                           <div style={styles.prReviewerContainer}>
-                            <span style={styles.prReviewerLabel}>🤖 Auto PR Reviewer:</span>
+                            <span style={styles.prReviewerLabel}>
+                              🤖 Auto PR Reviewer:
+                            </span>
                             <label style={styles.switch}>
                               <input
                                 type="checkbox"
@@ -618,7 +620,15 @@ export default function Home() {
                               </span>
                             </label>
                             {togglingPrReviewer[repo.id] && (
-                              <span style={{ fontSize: '11px', opacity: 0.5, color: '#8b949e' }}>Updating...</span>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  opacity: 0.5,
+                                  color: '#8b949e',
+                                }}
+                              >
+                                Updating...
+                              </span>
                             )}
                           </div>
                         </div>

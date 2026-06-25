@@ -214,7 +214,6 @@ Return ONLY JSON matching this schema:
   }
 }
 
-
 export async function getPrReviewsByDiffs(diff: any) {
   const prompt = `
 You are a friendly, constructive senior developer and code reviewer.
@@ -256,7 +255,8 @@ Return ONLY a valid JSON object matching the following schema structure:
     const text = await callOpenRouterWithFallback([
       {
         role: 'system',
-        content: 'You are a senior code reviewer. You must return only a valid JSON object matching the requested schema.',
+        content:
+          'You are a senior code reviewer. You must return only a valid JSON object matching the requested schema.',
       },
       {
         role: 'user',
@@ -269,94 +269,118 @@ Return ONLY a valid JSON object matching the following schema structure:
     const result = {
       summary: parsed.summary || 'PR reviewed successfully.',
       walkthrough: parsed.walkthrough || [],
-      comments: parsed.comments || []
+      comments: parsed.comments || [],
     }
     return {
       ...result,
-      reviewBody: formatPrReviewComment(result)
+      reviewBody: formatPrReviewComment(result),
     }
   } catch (error) {
-    console.error('Failed to get or parse structured PR review, returning raw text as summary:', error)
+    console.error(
+      'Failed to get or parse structured PR review, returning raw text as summary:',
+      error,
+    )
     const result = {
-      summary: 'Could not generate structured review. Diff analysis error or JSON parsing failed.',
+      summary:
+        'Could not generate structured review. Diff analysis error or JSON parsing failed.',
       walkthrough: [],
-      comments: []
+      comments: [],
     }
     return {
       ...result,
-      reviewBody: formatPrReviewComment(result)
+      reviewBody: formatPrReviewComment(result),
     }
   }
 }
 
 export function formatPrReviewComment(reviews: any): string {
   // Format a beautiful markdown body for the PR comment in CodeRabbit style
-  let body = `## 🤖 CyberSuite AI Code Review\n\n`;
-  body += `### 📝 Summary\n${reviews.summary}\n\n`;
+  let body = `## 🤖 CyberSuite AI Code Review\n\n`
+  body += `### 📝 Summary\n${reviews.summary}\n\n`
 
   // 1. Walkthrough Table
   if (reviews.walkthrough && reviews.walkthrough.length > 0) {
-      body += `### 📂 Walkthrough\n`;
-      body += `| File | Summary |\n`;
-      body += `| :--- | :--- |\n`;
-      reviews.walkthrough.forEach((w: any) => {
-          body += `| \`${w.filePath}\` | ${w.summary} |\n`;
-      });
-      body += `\n`;
+    body += `### 📂 Walkthrough\n`
+    body += `| File | Summary |\n`
+    body += `| :--- | :--- |\n`
+    reviews.walkthrough.forEach((w: any) => {
+      body += `| \`${w.filePath}\` | ${w.summary} |\n`
+    })
+    body += `\n`
   }
 
   // Helper to format suggestion code blocks
   const formatSuggestion = (filePath: string, suggestion: string) => {
-      const ext = filePath.split('.').pop() || '';
-      const lang = ['js', 'ts', 'py', 'go', 'rs', 'java', 'cpp', 'c', 'html', 'css', 'json', 'yaml', 'yml', 'dockerfile'].includes(ext.toLowerCase()) ? ext.toLowerCase() : '';
-      const nestedLines = suggestion.split('\n').map(line => `> ${line}`).join('\n');
-      return `>\n> **Suggested Fix:**\n> \`\`\`${lang}\n${nestedLines}\n> \`\`\`\n`;
-  };
-
-  // 2. Categorized detailed comments
-  const comments = reviews.comments || [];
-  const securityComments = comments.filter((c: any) => c.category === 'Security');
-  const bugComments = comments.filter((c: any) => c.category === 'Bug');
-  const refactorComments = comments.filter((c: any) => c.category === 'Refactor');
-
-  if (comments.length > 0) {
-      body += `### 🔍 Suggestions & Feedback\n\n`;
-
-      if (securityComments.length > 0) {
-          body += `#### ⚠️ Security & Vulnerabilities\n`;
-          securityComments.forEach((c: any) => {
-              body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`;
-              if (c.suggestion) {
-                  body += formatSuggestion(c.filePath, c.suggestion);
-              }
-          });
-          body += `\n`;
-      }
-
-      if (bugComments.length > 0) {
-          body += `#### 🐛 Logic & Bugs\n`;
-          bugComments.forEach((c: any) => {
-              body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`;
-              if (c.suggestion) {
-                  body += formatSuggestion(c.filePath, c.suggestion);
-              }
-          });
-          body += `\n`;
-      }
-
-      if (refactorComments.length > 0) {
-          body += `#### 💡 Style & Refactoring\n`;
-          refactorComments.forEach((c: any) => {
-              body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`;
-              if (c.suggestion) {
-                  body += formatSuggestion(c.filePath, c.suggestion);
-              }
-          });
-          body += `\n`;
-      }
-  } else {
-      body += `✨ No concerns found. Your code looks clean, safe, and ready to go!`;
+    const ext = filePath.split('.').pop() || ''
+    const lang = [
+      'js',
+      'ts',
+      'py',
+      'go',
+      'rs',
+      'java',
+      'cpp',
+      'c',
+      'html',
+      'css',
+      'json',
+      'yaml',
+      'yml',
+      'dockerfile',
+    ].includes(ext.toLowerCase())
+      ? ext.toLowerCase()
+      : ''
+    const nestedLines = suggestion
+      .split('\n')
+      .map((line) => `> ${line}`)
+      .join('\n')
+    return `>\n> **Suggested Fix:**\n> \`\`\`${lang}\n${nestedLines}\n> \`\`\`\n`
   }
 
-  return body;
+  // 2. Categorized detailed comments
+  const comments = reviews.comments || []
+  const securityComments = comments.filter((c: any) => c.category === 'Security')
+  const bugComments = comments.filter((c: any) => c.category === 'Bug')
+  const refactorComments = comments.filter((c: any) => c.category === 'Refactor')
+
+  if (comments.length > 0) {
+    body += `### 🔍 Suggestions & Feedback\n\n`
+
+    if (securityComments.length > 0) {
+      body += `#### ⚠️ Security & Vulnerabilities\n`
+      securityComments.forEach((c: any) => {
+        body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`
+        if (c.suggestion) {
+          body += formatSuggestion(c.filePath, c.suggestion)
+        }
+      })
+      body += `\n`
+    }
+
+    if (bugComments.length > 0) {
+      body += `#### 🐛 Logic & Bugs\n`
+      bugComments.forEach((c: any) => {
+        body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`
+        if (c.suggestion) {
+          body += formatSuggestion(c.filePath, c.suggestion)
+        }
+      })
+      body += `\n`
+    }
+
+    if (refactorComments.length > 0) {
+      body += `#### 💡 Style & Refactoring\n`
+      refactorComments.forEach((c: any) => {
+        body += `* **\`${c.filePath}\` (Line ${c.line})**: ${c.description}\n`
+        if (c.suggestion) {
+          body += formatSuggestion(c.filePath, c.suggestion)
+        }
+      })
+      body += `\n`
+    }
+  } else {
+    body += `✨ No concerns found. Your code looks clean, safe, and ready to go!`
+  }
+
+  return body
 }
