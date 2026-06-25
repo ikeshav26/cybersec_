@@ -18,7 +18,7 @@ app.use(express.json())
 app.use(cookieParser())
 app.use(helmet())
 
-app.get('/api/health', scanLimiter, (req: Request, res: Response) => {
+app.get('/api/health', (req: Request, res: Response) => {
     return res.status(200).json({ message: "API Gateway is healthy" })
 })
 app.use('/api/auth', authProxy)

@@ -14,6 +14,7 @@ interface Repository {
   id: string
   repo_name: string
   repo_url: string
+  prReviewer: boolean
   createdAt: string
 }
 
@@ -57,6 +58,7 @@ export default function Home() {
   const [bulkFixResults, setBulkFixResults] = useState<any[] | null>(null)
   const [openingPR, setOpeningPR] = useState(false)
   const [prUrl, setPrUrl] = useState<string | null>(null)
+  const [togglingPrReviewer, setTogglingPrReviewer] = useState<Record<string, boolean>>({})
 
   // 1. Process URL redirects & load credentials
   useEffect(() => {
@@ -409,6 +411,35 @@ export default function Home() {
     }
   }
 
+  const handleTogglePrReviewer = async (repoId: string) => {
+    if (!token) return
+    setTogglingPrReviewer((prev) => ({ ...prev, [repoId]: true }))
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/v1/pr-reviewer/update-status/${repoId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      const resData = await response.json()
+      if (response.ok) {
+        setRepos((prev) =>
+          prev.map((r) =>
+            r.id === repoId ? { ...r, prReviewer: !r.prReviewer } : r
+          )
+        )
+      } else {
+        alert(resData.message || 'Failed to toggle PR reviewer status')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to connect to backend')
+    } finally {
+      setTogglingPrReviewer((prev) => ({ ...prev, [repoId]: false }))
+    }
+  }
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -559,6 +590,37 @@ export default function Home() {
                               )}
                             </div>
                           )}
+
+                          {/* Auto PR Reviewer Toggle Switch */}
+                          <div style={styles.prReviewerContainer}>
+                            <span style={styles.prReviewerLabel}>🤖 Auto PR Reviewer:</span>
+                            <label style={styles.switch}>
+                              <input
+                                type="checkbox"
+                                checked={repo.prReviewer || false}
+                                disabled={!!togglingPrReviewer[repo.id]}
+                                onChange={() => handleTogglePrReviewer(repo.id)}
+                                style={styles.switchInput}
+                              />
+                              <span
+                                style={{
+                                  ...styles.slider,
+                                  ...(repo.prReviewer ? styles.sliderActive : {}),
+                                  opacity: togglingPrReviewer[repo.id] ? 0.6 : 1,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    ...styles.sliderCircle,
+                                    ...(repo.prReviewer ? styles.sliderCircleActive : {}),
+                                  }}
+                                />
+                              </span>
+                            </label>
+                            {togglingPrReviewer[repo.id] && (
+                              <span style={{ fontSize: '11px', opacity: 0.5, color: '#8b949e' }}>Updating...</span>
+                            )}
+                          </div>
                         </div>
 
                         <div style={styles.repoActions}>
@@ -1577,5 +1639,57 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#c9d1d9',
     maxHeight: '300px',
     overflowY: 'auto',
+  },
+  prReviewerContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '12px',
+  },
+  prReviewerLabel: {
+    fontSize: '13px',
+    color: '#c9d1d9',
+    userSelect: 'none',
+  },
+  switch: {
+    position: 'relative',
+    display: 'inline-block',
+    width: '36px',
+    height: '20px',
+    cursor: 'pointer',
+  },
+  switchInput: {
+    opacity: 0,
+    width: 0,
+    height: 0,
+    display: 'none',
+  },
+  slider: {
+    position: 'absolute',
+    cursor: 'pointer',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#30363d',
+    transition: 'background-color 0.2s',
+    borderRadius: '20px',
+  },
+  sliderActive: {
+    backgroundColor: '#238636',
+  },
+  sliderCircle: {
+    position: 'absolute',
+    content: '""',
+    height: '14px',
+    width: '14px',
+    left: '3px',
+    bottom: '3px',
+    backgroundColor: '#ffffff',
+    transition: 'transform 0.2s',
+    borderRadius: '50%',
+  },
+  sliderCircleActive: {
+    transform: 'translateX(16px)',
   },
 }

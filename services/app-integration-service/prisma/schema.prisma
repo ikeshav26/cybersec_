@@ -22,10 +22,11 @@ model Installation {
 }
 
 model Repository {
-  id             String @id @default(uuid())
-  repo_name      String @unique
-  repo_url       String @unique
+  id             String  @id @default(uuid())
+  repo_name      String  @unique
+  repo_url       String  @unique
   installationId String
+  prReviewer     Boolean @default(false)
 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

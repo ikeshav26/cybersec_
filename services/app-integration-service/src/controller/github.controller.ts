@@ -8,7 +8,7 @@ export const githubWebhookController = async (req: Request, res: Response) => {
     console.log('========== WEBHOOK ==========')
     console.log('Event:', req.headers['x-github-event'])
 
-    const { action, repositories_removed } = req.body
+    const { action, repositories_removed, repository, installation, pull_request } = req.body
 
     if (action === 'removed') {
       for (const repo of repositories_removed) {
@@ -43,6 +43,47 @@ export const githubWebhookController = async (req: Request, res: Response) => {
           },
         })
       }
+    }
+
+
+    if (action === 'opened') {
+      const repoName = repository.full_name;
+      const prNumber = pull_request.number;
+
+      const repo = await prisma.repository.findUnique({
+        where: {
+          repo_name: repoName,
+          installation: {
+            installationId: installation.id
+          }
+        }
+      })
+
+      if (!repo) {
+        return res.status(400).json({ message: "Repository does not exist!" })
+      }
+
+      if (!repo.prReviewer) {
+        return res.status(200).json({ message: "Auto Pull-Request reviewer is disabled!" })
+      }
+
+      const token = jwt.sign(
+        { id: installation.id },
+        process.env.JWT_SECRET as string,
+      )
+
+      await axios.post(
+        `${process.env.SECURE_BOT_SERVICE_URL}/api/secure-bot/review/pr`,
+        {
+          repoName,
+          prNumber,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
     }
 
     return res.sendStatus(200)
