@@ -46,7 +46,7 @@ export const githubWebhookController = async (req: Request, res: Response) => {
     }
 
 
-    if (action === 'opened') {
+    if (action === 'opened' || action === 'reopened' || action === 'synchronize') {
       console.log("Pr open event received..")
       const repoName = repository.full_name;
       const prNumber = pull_request.number;

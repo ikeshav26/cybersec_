@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { App, Octokit } from "octokit"
+import { getPrReviewsByDiffs } from "../config/ai.js";
 
 
 const githubApp = new App({
@@ -28,8 +29,23 @@ export const reviewPr = async (req: Request, res: Response) => {
                 }
             }
         )
+
         console.log(prDiff.data)
-        return res.status(200).json({ message: "Received Diffs for pr" })
+
+        const reviews = await getPrReviewsByDiffs(prDiff.data);
+        console.log("============= AI PR REVIEW =============");
+        console.log(JSON.stringify(reviews, null, 2));
+
+
+        const commentPrReview = await octokit.rest.pulls.createReview({
+            owner,
+            repo,
+            pull_number: Number(prNumber),
+            body: reviews.reviewBody,
+            event: "COMMENT"
+        });
+
+        return res.status(200).json({ message: "PR reviewed successfully", reviewBody: reviews.reviewBody })
     } catch (err) {
         console.log(err)
         return res.status(500).json({ message: "Internal server error" })
