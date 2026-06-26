@@ -99,7 +99,7 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
           {/* Primary — white fill */}
           <a
-            href="https://github.com"
+            href="https://github.com/apps/aegisbykeshav"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-black font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 shadow-[0_0_30px_rgba(255,255,255,0.1)] cursor-pointer"
@@ -116,7 +116,7 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
 
           {/* Secondary — ghost */}
           <a
-            href="/login"
+            href="/auth"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white/[0.05] text-white font-medium text-base px-8 py-3.5 rounded-xl border border-white/[0.12] hover:bg-white/[0.1] hover:border-white/25 active:scale-[0.98] transition-all duration-200 backdrop-blur-sm cursor-pointer"
           >
             <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
