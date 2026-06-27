@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useUserStore } from '../store/useUserStore'
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -11,6 +13,15 @@ const GitHubIcon = ({ className }: { className?: string }) => (
 )
 
 const Auth = () => {
+  const { isAuthenticated } = useUserStore()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
+
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center bg-black text-white overflow-hidden py-12 px-4 md:px-6">
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -40,7 +51,6 @@ const Auth = () => {
             className="text-xs font-black tracking-[0.4em] text-white/80 hover:text-white transition-all duration-300 uppercase flex items-center gap-1.5"
           >
             <span>aegis</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </Link>
         </div>
 

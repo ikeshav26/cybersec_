@@ -1,16 +1,65 @@
+import { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import About from './pages/About'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import Features from './pages/Features'
 import Home from './pages/Home'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useUserStore } from './store/useUserStore'
+import { toast, Toaster } from 'react-hot-toast'
 
 const NAVBAR_HIDDEN_ROUTES = ['/auth']
 
 const App = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const showNavbar = !NAVBAR_HIDDEN_ROUTES.includes(location.pathname)
+  const { setUser } = useUserStore()
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const token = params.get('token')
+
+    if (token) {
+      localStorage.setItem('token', token)
+
+      const fetchUser = async () => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_AUTH_SERVICE_URL}/api/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          if (response.ok) {
+            const data = await response.json()
+            if (data.user) {
+              setUser(data.user)
+              toast.success(`Welcome back, ${data.user.name || data.user.username}!`)
+            }
+          } else {
+            toast.error('Authentication failed')
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error)
+        } finally {
+          params.delete('token')
+          params.delete('oauth')
+          params.delete('user')
+          const newSearch = params.toString()
+          navigate(
+            {
+              pathname: location.pathname,
+              search: newSearch ? `?${newSearch}` : ''
+            },
+            { replace: true }
+          )
+        }
+      }
+
+      fetchUser()
+    }
+  }, [location.search, location.pathname, navigate, setUser])
 
   return (
     <div className="bg-black w-full min-h-screen text-white font-sans selection:bg-white/10 selection:text-white">
@@ -24,6 +73,31 @@ const App = () => {
           <Route path="/auth" element={<Auth />} />
         </Routes>
       </main>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#0a0a0a',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontFamily: 'Geist Variable, sans-serif',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#000000',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#000000',
+            },
+          },
+        }}
+      />
     </div>
   )
 }
