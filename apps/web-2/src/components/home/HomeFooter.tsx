@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const HomeFooter: React.FC = () => {
   return (
@@ -11,9 +12,9 @@ export const HomeFooter: React.FC = () => {
           © {new Date().getFullYear()} Aegis. All rights reserved.
         </span>
         <div className="flex items-center gap-5">
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/30 hover:text-white/60 transition-colors">GitHub</a>
-          <a href="#contact" className="text-xs text-white/30 hover:text-white/60 transition-colors">Contact</a>
-          <a href="/about" className="text-xs text-white/30 hover:text-white/60 transition-colors">About</a>
+          <Link to="https://github.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/30 hover:text-white/60 transition-colors">GitHub</Link>
+          <Link to="#contact" className="text-xs text-white/30 hover:text-white/60 transition-colors">Contact</Link>
+          <Link to="/about" className="text-xs text-white/30 hover:text-white/60 transition-colors">About</Link>
         </div>
       </div>
     </footer>

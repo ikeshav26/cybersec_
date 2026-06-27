@@ -1,5 +1,6 @@
 import React from 'react';
 import LightRays from '../ui/LightRays';
+import { Link } from 'react-router-dom';
 
 interface HeroProps {
   className?: string;
@@ -10,12 +11,8 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
     <section
       className={`relative min-h-screen w-full flex flex-col justify-center items-center overflow-hidden bg-black text-white ${className}`}
     >
-      {/* ─── Background Lighting System ─── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Solid Black Base */}
         <div className="absolute inset-0 bg-black" />
-
-        {/* Soft white left glow */}
         <div
           className="absolute bottom-[-10%] left-[-15%] w-[80%] h-[120%] opacity-[0.06] blur-[160px]"
           style={{
@@ -24,8 +21,6 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             transformOrigin: 'bottom left',
           }}
         />
-
-        {/* Soft white right glow */}
         <div
           className="absolute bottom-[-10%] right-[-15%] w-[80%] h-[120%] opacity-[0.06] blur-[160px]"
           style={{
@@ -35,7 +30,6 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
           }}
         />
 
-        {/* Central white halo */}
         <div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[70%] h-[60%] opacity-[0.07] blur-[140px]"
           style={{
@@ -43,7 +37,6 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
           }}
         />
 
-        {/* WebGL LightRays */}
         <div className="absolute inset-0">
           <LightRays
             raysOrigin="bottom-center"
@@ -61,15 +54,9 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             saturation={1}
           />
         </div>
-
-        {/* Bottom fade to black */}
         <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent" />
       </div>
-
-      {/* ─── Hero Content ─── */}
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 md:px-12 flex flex-col items-center text-center pt-16 pb-16">
-
-        {/* Announcement Badge */}
         <div className="inline-flex items-center gap-2.5 bg-white/[0.05] border border-white/[0.12] rounded-full px-4 py-1.5 mb-10 hover:border-white/25 hover:bg-white/[0.08] transition-all duration-300 cursor-default shadow-[0_4px_16px_rgba(0,0,0,0.6)] backdrop-blur-md">
           <span className="bg-white text-black px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase leading-none">
             NEW
@@ -78,8 +65,6 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             AI security scans, fully automated
           </span>
         </div>
-
-        {/* Giant Title */}
         <h1
           className="text-[clamp(5rem,15vw,12rem)] font-black tracking-tighter leading-[0.9] text-white select-none uppercase mb-6"
           style={{
@@ -89,17 +74,14 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
           aegis
         </h1>
 
-        {/* Subtitle */}
         <p className="text-base md:text-lg text-white/40 max-w-xl mx-auto mb-12 leading-relaxed font-normal tracking-wide">
           AI security scanning that fixes what it finds —{' '}
           <span className="text-white/70">not just comments on it.</span>
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
-          {/* Primary — white fill */}
-          <a
-            href="https://github.com/apps/aegisbykeshav"
+          <Link
+            to="https://github.com/apps/aegisbykeshav"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-black font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 shadow-[0_0_30px_rgba(255,255,255,0.1)] cursor-pointer"
@@ -112,11 +94,9 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
               />
             </svg>
             Install on GitHub
-          </a>
-
-          {/* Secondary — ghost */}
-          <a
-            href="/auth"
+          </Link>
+          <Link
+            to="/auth"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white/[0.05] text-white font-medium text-base px-8 py-3.5 rounded-xl border border-white/[0.12] hover:bg-white/[0.1] hover:border-white/25 active:scale-[0.98] transition-all duration-200 backdrop-blur-sm cursor-pointer"
           >
             <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
@@ -127,12 +107,11 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
               />
             </svg>
             Login with GitHub
-          </a>
+          </Link>
         </div>
 
       </div>
 
-      {/* Bottom-left watermark */}
       <div className="absolute bottom-7 left-8 z-10 select-none opacity-20 hover:opacity-50 transition-opacity duration-300 hidden md:block">
         <span className="text-[11px] text-white font-semibold tracking-[0.25em] uppercase">
           aegis

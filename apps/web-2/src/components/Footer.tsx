@@ -5,8 +5,7 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-black text-neutral-500 py-16 px-6 md:px-12 border-t border-neutral-900 select-none">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-12 text-left">
-        
-        {/* Left Column: Logo & Branding */}
+
         <div className="flex flex-col justify-start max-w-xs">
           <div className="flex items-center gap-2 text-white font-bold tracking-widest uppercase mb-4">
             <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-300 w-2.5 h-2.5 rounded-full inline-block" />
@@ -17,9 +16,7 @@ export const Footer: React.FC = () => {
           </p>
         </div>
 
-        {/* Right Columns: Links */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-16">
-          {/* Column 1: Product */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Product
@@ -31,7 +28,6 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 2: Docs */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Resources
@@ -43,7 +39,6 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 3: Platform */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Developer
@@ -54,7 +49,6 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 4: Legal */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Legal
@@ -69,7 +63,6 @@ export const Footer: React.FC = () => {
 
       </div>
 
-      {/* Bottom Copyright */}
       <div className="max-w-6xl mx-auto mt-16 pt-8 border-t border-neutral-900 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-neutral-600">
         <span>© {new Date().getFullYear()} Aegis Security. All rights reserved.</span>
         <span>Secured automatically using AI.</span>

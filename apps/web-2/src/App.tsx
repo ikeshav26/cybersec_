@@ -6,7 +6,7 @@ import Features from './pages/Features'
 import Home from './pages/Home'
 import { Route, Routes, useLocation } from 'react-router-dom'
 
-// Routes where the Navbar should be hidden (focused flows)
+
 const NAVBAR_HIDDEN_ROUTES = ['/auth'];
 
 const App = () => {

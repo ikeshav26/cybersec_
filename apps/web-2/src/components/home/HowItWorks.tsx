@@ -27,7 +27,6 @@ export const HowItWorks: React.FC = () => {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       <div className="max-w-6xl mx-auto">
-        {/* Section label */}
         <div className="flex items-center gap-3 mb-6">
           <span className="w-6 h-px bg-white/30" />
           <span className="text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
@@ -40,9 +39,7 @@ export const HowItWorks: React.FC = () => {
           <span className="text-white/40">secure repo.</span>
         </h2>
 
-        {/* Steps */}
         <div className="relative">
-          {/* Vertical connector line */}
           <div className="absolute left-[27px] top-10 bottom-10 w-px bg-white/[0.07] hidden md:block" />
 
           <div className="flex flex-col gap-0">
@@ -51,14 +48,11 @@ export const HowItWorks: React.FC = () => {
                 key={item.step}
                 className="relative flex gap-8 md:gap-12 items-start group"
               >
-                {/* Step number bubble */}
                 <div className="relative z-10 flex-shrink-0 w-14 h-14 rounded-full border border-white/[0.12] bg-black flex items-center justify-center group-hover:border-white/30 transition-all duration-300">
                   <span className="text-sm font-black text-white/40 group-hover:text-white/70 transition-colors duration-300">
                     {item.step}
                   </span>
                 </div>
-
-                {/* Content */}
                 <div className={`pb-16 ${idx === STEPS.length - 1 ? 'pb-0' : ''}`}>
                   <h3 className="text-xl md:text-2xl font-black text-white mb-3 mt-3 tracking-tight">
                     {item.title}

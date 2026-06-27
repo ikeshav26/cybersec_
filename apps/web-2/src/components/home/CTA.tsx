@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const CTA: React.FC = () => {
   return (
@@ -7,8 +8,6 @@ export const CTA: React.FC = () => {
       className="relative w-full bg-black py-32 px-6 md:px-12 overflow-hidden"
     >
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-      {/* Subtle radial glow behind text */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -18,7 +17,6 @@ export const CTA: React.FC = () => {
       />
 
       <div className="relative max-w-3xl mx-auto flex flex-col items-center text-center">
-        {/* Label */}
         <div className="flex items-center gap-3 mb-8">
           <span className="w-6 h-px bg-white/30" />
           <span className="text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
@@ -39,8 +37,8 @@ export const CTA: React.FC = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full">
-          <a
-            href="https://github.com/apps/aegis"
+          <Link
+            to="https://github.com/apps/aegisbykeshav"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-black font-bold text-base px-10 py-4 rounded-xl hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 shadow-[0_0_40px_rgba(255,255,255,0.08)] cursor-pointer"
@@ -53,17 +51,16 @@ export const CTA: React.FC = () => {
               />
             </svg>
             Install on GitHub — it's free
-          </a>
+          </Link>
 
-          <a
-            href="/auth"
+          <Link
+            to="/auth"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-white/50 hover:text-white text-sm font-medium transition-colors duration-200 py-4 cursor-pointer"
           >
             Or login to your account →
-          </a>
+          </Link>
         </div>
 
-        {/* Trust line */}
         <p className="mt-10 text-xs text-white/20 tracking-wide">
           Trusted by engineers at early-stage startups and growing teams.
         </p>
