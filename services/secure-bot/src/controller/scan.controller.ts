@@ -132,3 +132,49 @@ export const removeRepoScanAndFindings = async (req: Request, res: Response) => 
     return res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export const getScanHistory = async (req: Request, res: Response) => {
+  try {
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1]
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const appIntegrationServiceUrl =
+      process.env.APP_INTEGRATION_SERVICE_BASE_URL || 'http://localhost:5001'
+    const reposResponse = await axios.get(`${appIntegrationServiceUrl}/api/v1/repos`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const reposList = reposResponse.data.data || []
+    const repoIds = reposList.map((r: any) => r.id)
+
+    const scans = await prisma.scan.findMany({
+      where: {
+        repositoryId: { in: repoIds },
+      },
+      include: {
+        findings: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    const reposMap = new Map(reposList.map((r: any) => [r.id, r.repo_name]))
+    const formattedScans = scans.map((s) => ({
+      ...s,
+      repoName: reposMap.get(s.repositoryId) || 'Unknown Repo',
+    }))
+
+    return res.status(200).json({
+      success: true,
+      data: formattedScans,
+    })
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: 'Internal server error' })
+  }
+}

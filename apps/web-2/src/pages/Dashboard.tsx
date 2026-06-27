@@ -23,28 +23,19 @@ import {
   ChevronUp
 } from 'lucide-react'
 
-interface Finding {
-  id: string
-  title: string
-  description: string
-  filePath: string
-  line?: number
-  severity: string
-  tool: string
-  status: string
-}
-
 const Dashboard = () => {
   const { user, isAuthenticated, setUser, setIsAuthenticated, clearUser } = useUserStore()
   const navigate = useNavigate()
   
-  // Dashboard Navigation State (Overview = Configurations, Repositories = Scan & Fix, Reviewer = PR Reviewer)
-  const [activeTab, setActiveTab] = useState<'repositories' | 'reviewer' | 'overview'>('repositories')
+  // Dashboard Navigation State
+  const [activeTab, setActiveTab] = useState<'repositories' | 'scans' | 'fixes' | 'reviewer' | 'overview'>('repositories')
   const [repos, setRepos] = useState<any[]>([])
+  const [scans, setScans] = useState<any[]>([])
   const [isSyncing, setIsSyncing] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const [isScansLoading, setIsScansLoading] = useState(false)
 
-  // Real-time scan states mapped by repository ID
+  // Real-time scan states mapped by repository ID for active scans on the page
   const [scanStatus, setScanStatus] = useState<
     Record<
       string,
@@ -53,27 +44,10 @@ const Dashboard = () => {
         status: string
         error?: string
         findingsCount?: number
-        findings?: Finding[]
       }
     >
   >({})
 
-  // Active findings modal explorer
-  const [activeRepoFindings, setActiveRepoFindings] = useState<{
-    repoId: string
-    repoName: string
-    scanId: string
-    findings: Finding[]
-    error?: string
-  } | null>(null)
-
-  const [fixingFindingId, setFixingFindingId] = useState<string | null>(null)
-  const [fixResults, setFixResults] = useState<Record<string, { explanation: string; code: string }>>({})
-  const [expandedFixIds, setExpandedFixIds] = useState<Record<string, boolean>>({})
-  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
-  const [fixingAll, setFixingAll] = useState(false)
-  const [isPrOpening, setIsPrOpening] = useState(false)
-  const [openedPrUrl, setOpenedPrUrl] = useState<string | null>(null)
   const [togglingPrReviewer, setTogglingPrReviewer] = useState<Record<string, boolean>>({})
 
   // 1. Process URL redirects & load credentials on load
@@ -112,6 +86,13 @@ const Dashboard = () => {
     }
   }, [isAuthenticated])
 
+  // Fetch scans history when relevant tab is selected
+  useEffect(() => {
+    if (isAuthenticated && (activeTab === 'scans' || activeTab === 'fixes')) {
+      fetchScanHistory()
+    }
+  }, [activeTab, isAuthenticated])
+
   const loadReposFromDb = async () => {
     try {
       setIsPageLoading(true)
@@ -132,6 +113,29 @@ const Dashboard = () => {
       console.error('Error loading repos from database:', error)
     } finally {
       setIsPageLoading(false)
+    }
+  }
+
+  const fetchScanHistory = async () => {
+    try {
+      setIsScansLoading(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+      const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/scan/history`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          setScans(data.data || [])
+        }
+      }
+    } catch (error) {
+      console.error('Error loading scan history:', error)
+    } finally {
+      setIsScansLoading(false)
     }
   }
 
@@ -282,14 +286,14 @@ const Dashboard = () => {
                 id: targetScanId,
                 status: scan.status,
                 error: scan.error || undefined,
-                findingsCount: scan.findings?.length || 0,
-                findings: scan.findings
+                findingsCount: scan.findings?.length || 0
               }
             }))
             if (scan.status === 'SUCCESS' || scan.status === 'FAILED') {
               clearInterval(interval)
               if (scan.status === 'SUCCESS') {
-                toast.success(`Scan complete! Found ${scan.findings?.length || 0} issues.`)
+                toast.success('Scan complete! Loading findings console...')
+                navigate(`/findings/${targetScanId}`)
               } else {
                 toast.error(`Scan failed: ${scan.error || 'Unknown scanner error'}`)
               }
@@ -303,186 +307,6 @@ const Dashboard = () => {
         clearInterval(interval)
       }
     }, 2500)
-  }
-
-  const viewFindings = (repoId: string, repoName: string, scanInfo: any) => {
-    setActiveRepoFindings({
-      repoId,
-      repoName,
-      scanId: scanInfo.id,
-      findings: scanInfo.findings || [],
-      error: scanInfo.error
-    })
-    setFindings(scanInfo.findings || [])
-    setSelectedFindingIds([])
-    setFixResults({})
-    setExpandedFixIds({})
-    setOpenedPrUrl(null)
-  }
-
-  const handleFixFinding = async (findingId: string) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
-    setFixingFindingId(findingId)
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/fix/finding/${findingId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        toast.success('Fix applied successfully!')
-        setFixResults((prev) => ({
-          ...prev,
-          [findingId]: {
-            explanation: data.explanation || 'Remediation completed by securing the codebase logic.',
-            code: data.code || ''
-          }
-        }))
-        setExpandedFixIds((prev) => ({
-          ...prev,
-          [findingId]: true
-        }))
-        
-        // Update local findings arrays
-        const updatedFindings = findings.map((f) =>
-          f.id === findingId ? { ...f, status: 'RESOLVED' } : f
-        )
-        setFindings(updatedFindings)
-        if (activeRepoFindings) {
-          setActiveRepoFindings({
-            ...activeRepoFindings,
-            findings: updatedFindings
-          })
-        }
-      } else {
-        const data = await response.json()
-        toast.error(data.message || 'Failed to apply automated patch')
-      }
-    } catch (error) {
-      console.error('Error applying patch:', error)
-      toast.error('Network error applying patch')
-    } finally {
-      setFixingFindingId(null)
-    }
-  }
-
-  const handleFixSelected = async () => {
-    const token = localStorage.getItem('token')
-    if (!token || selectedFindingIds.length === 0) return
-
-    setFixingAll(true)
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/fix/findings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          findingIds: selectedFindingIds
-        })
-      })
-
-      if (response.ok) {
-        const resData = await response.json()
-        toast.success('Bulk fixes generated successfully!')
-
-        const updatedFindings = findings.map((f) =>
-          selectedFindingIds.includes(f.id) ? { ...f, status: 'RESOLVED' } : f
-        )
-        setFindings(updatedFindings)
-        if (activeRepoFindings) {
-          setActiveRepoFindings({
-            ...activeRepoFindings,
-            findings: updatedFindings
-          })
-        }
-
-        const newFixResults = { ...fixResults }
-        const newExpandedFixIds = { ...expandedFixIds }
-
-        if (resData.results && Array.isArray(resData.results)) {
-          const sanitizePath = (p: string) => p.replace(/^\/?(repo|src)\//, '')
-          resData.results.forEach((res: any) => {
-            const resSanitized = sanitizePath(res.filePath)
-            findings.forEach((f) => {
-              if (selectedFindingIds.includes(f.id)) {
-                const fSanitized = sanitizePath(f.filePath)
-                if (fSanitized === resSanitized) {
-                  newFixResults[f.id] = {
-                    explanation: res.explanation,
-                    code: res.fixedCode
-                  }
-                  newExpandedFixIds[f.id] = true
-                }
-              }
-            })
-          })
-        }
-
-        setFixResults(newFixResults)
-        setExpandedFixIds(newExpandedFixIds)
-        setSelectedFindingIds([])
-      } else {
-        toast.error('Failed to apply bulk fixes')
-      }
-    } catch (error) {
-      console.error('Error applying bulk fixes:', error)
-      toast.error('Failed to connect to fixing service')
-    } finally {
-      setFixingAll(false)
-    }
-  }
-
-  const openPR = async () => {
-    if (!activeRepoFindings?.scanId) return
-    const token = localStorage.getItem('token')
-    if (!token) return
-
-    setIsPrOpening(true)
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/pr/open-pr/${activeRepoFindings.scanId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        toast.success('Pull Request opened successfully!')
-        if (data.pr && data.pr.html_url) {
-          setOpenedPrUrl(data.pr.html_url)
-          window.open(data.pr.html_url, '_blank')
-        }
-      } else {
-        const data = await response.json()
-        toast.error(data.message || 'Failed to create Pull Request')
-      }
-    } catch (error) {
-      console.error('Error creating PR:', error)
-      toast.error('Failed to create Pull Request')
-    } finally {
-      setIsPrOpening(false)
-    }
-  }
-
-  // Calculate Repository Security Letter Score based on findings quantity
-  const calculateSecurityScore = (findingsList: Finding[]) => {
-    if (findingsList.length === 0) return { score: 'A+', color: 'text-emerald-400' }
-    const criticals = findingsList.filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH').length
-    const mediums = findingsList.filter(f => f.severity === 'MEDIUM').length
-    
-    if (criticals === 0 && mediums === 0) return { score: 'A', color: 'text-emerald-400' }
-    if (criticals === 0 && mediums > 0) return { score: 'B', color: 'text-yellow-400' }
-    if (criticals === 1) return { score: 'C', color: 'text-orange-400' }
-    if (criticals > 1 && criticals < 5) return { score: 'D', color: 'text-red-400' }
-    return { score: 'F', color: 'text-red-500 font-extrabold' }
   }
 
   const handleLogout = () => {
@@ -549,6 +373,8 @@ const Dashboard = () => {
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block px-3 mb-2">Workspace</span>
             {[
               { id: 'repositories', label: 'Security Scan & Fix', icon: Shield },
+              { id: 'scans', label: 'Security Scans', icon: Database },
+              { id: 'fixes', label: 'Scan Fixes', icon: CheckCircle2 },
               { id: 'reviewer', label: 'Auto PR Reviewer', icon: GitPullRequest },
               { id: 'overview', label: 'Configurations', icon: User }
             ].map((tab) => {
@@ -605,7 +431,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
-            {/* TAB 1: SECURITY SCAN & FIX (Feature 1) */}
+            {/* TAB 1: SECURITY SCAN & FIX (Feature 1 - Repos list) */}
             {activeTab === 'repositories' && (
               <div className="space-y-8 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -672,7 +498,7 @@ const Dashboard = () => {
                                   href={repo.repo_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors animate-in fade-in duration-100"
+                                  className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
                                 >
                                   Open GitHub
                                   <ExternalLink className="w-3.5 h-3.5" />
@@ -692,16 +518,6 @@ const Dashboard = () => {
                                     >
                                       Status: {scanInfo.status}
                                     </span>
-                                    {scanInfo.status === 'SUCCESS' && (
-                                      <span className="text-xs text-neutral-400 font-semibold">
-                                        ({scanInfo.findingsCount} issues)
-                                      </span>
-                                    )}
-                                    {scanInfo.status === 'FAILED' && scanInfo.error && (
-                                      <span className="text-xs text-red-400 font-semibold max-w-[120px] truncate" title={scanInfo.error}>
-                                        ({scanInfo.error})
-                                      </span>
-                                    )}
                                   </div>
                                 ) : (
                                   <span className="text-xs text-neutral-500 font-medium">Not Scanned Yet</span>
@@ -717,22 +533,6 @@ const Dashboard = () => {
                                     <Play className="w-3.5 h-3.5 fill-current" />
                                     {scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS' ? 'Scanning...' : 'Scan Now'}
                                   </button>
-                                  {scanInfo?.status === 'SUCCESS' && (
-                                    <button
-                                      onClick={() => viewFindings(repo.id, repo.repo_name, scanInfo)}
-                                      className="inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
-                                    >
-                                      📋 View Findings
-                                    </button>
-                                  )}
-                                  {scanInfo?.status === 'FAILED' && (
-                                    <button
-                                      onClick={() => viewFindings(repo.id, repo.repo_name, scanInfo)}
-                                      className="inline-flex items-center gap-1 border border-red-500/20 bg-red-950/20 text-red-400 font-bold text-xs px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
-                                    >
-                                      ⚠️ View Error
-                                    </button>
-                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -745,7 +545,149 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* TAB 2: AUTO PR REVIEWER (Feature 2) */}
+            {/* TAB 2: SECURITY SCANS HISTORY */}
+            {activeTab === 'scans' && (
+              <div className="space-y-8 animate-in fade-in duration-200">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Security Scans History</h1>
+                  <p className="text-neutral-400 text-sm">Review historical security evaluation reports for user repositories.</p>
+                </div>
+
+                {isScansLoading ? (
+                  <div className="space-y-4 animate-pulse">
+                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
+                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
+                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
+                  </div>
+                ) : scans.length === 0 ? (
+                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl bg-neutral-950 space-y-4">
+                    <Shield className="w-8 h-8 text-neutral-600 mx-auto" />
+                    <div>
+                      <h3 className="text-sm font-bold text-white">No Scans Recorded</h3>
+                      <p className="text-neutral-500 text-xs mt-1">Start a security scan on any repository to begin evaluation.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                          <th className="p-4 pl-6">Scan ID</th>
+                          <th className="p-4">Repository Name</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-center">Findings Detected</th>
+                          <th className="p-4 text-center">Date Created</th>
+                          <th className="p-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm divide-y divide-white/[0.04]">
+                        {scans.map((scanItem) => (
+                          <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
+                            <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
+                            <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
+                            <td className="p-4 text-center">
+                              <span
+                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                  scanItem.status === 'SUCCESS'
+                                    ? 'bg-emerald-950 border border-emerald-500/20 text-emerald-400'
+                                    : scanItem.status === 'FAILED'
+                                    ? 'bg-red-950 border border-red-500/20 text-red-400'
+                                    : 'bg-blue-950 border border-blue-500/20 text-blue-400'
+                                }`}
+                              >
+                                {scanItem.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center font-bold text-neutral-200">
+                              {scanItem.findings?.length || 0} issues
+                            </td>
+                            <td className="p-4 text-center text-xs text-neutral-400">
+                              {new Date(scanItem.createdAt).toLocaleString()}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => navigate(`/findings/${scanItem.id}`)}
+                                className="inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                              >
+                                📋 View Findings
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: SCAN FIXES */}
+            {activeTab === 'fixes' && (
+              <div className="space-y-8 animate-in fade-in duration-200">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Scan Fixes Console</h1>
+                  <p className="text-neutral-400 text-sm">Review scans containing resolved vulnerabilities and secure code patches.</p>
+                </div>
+
+                {isScansLoading ? (
+                  <div className="space-y-4 animate-pulse">
+                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
+                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
+                  </div>
+                ) : scans.filter(s => s.findings && s.findings.some((f: any) => f.status === 'RESOLVED')).length === 0 ? (
+                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl bg-neutral-950 space-y-4">
+                    <CheckCircle2 className="w-8 h-8 text-neutral-600 mx-auto" />
+                    <div>
+                      <h3 className="text-sm font-bold text-white">No Fixed Scans Yet</h3>
+                      <p className="text-neutral-500 text-xs mt-1">Select findings from your scans and apply AI fixes to view them here.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                          <th className="p-4 pl-6">Scan ID</th>
+                          <th className="p-4">Repository Name</th>
+                          <th className="p-4 text-center">Patched Vulnerabilities</th>
+                          <th className="p-4 text-center">Date Remedied</th>
+                          <th className="p-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm divide-y divide-white/[0.04]">
+                        {scans
+                          .filter((scanItem) => scanItem.findings && scanItem.findings.some((f: any) => f.status === 'RESOLVED'))
+                          .map((scanItem) => {
+                            const resolvedCount = scanItem.findings.filter((f: any) => f.status === 'RESOLVED').length
+                            return (
+                              <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
+                                <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
+                                <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
+                                <td className="p-4 text-center text-emerald-400 font-bold">
+                                  ✓ {resolvedCount} resolved
+                                </td>
+                                <td className="p-4 text-center text-xs text-neutral-400">
+                                  {new Date(scanItem.updatedAt).toLocaleString()}
+                                </td>
+                                <td className="p-4 text-center">
+                                  <button
+                                    onClick={() => navigate(`/findings/${scanItem.id}`)}
+                                    className="inline-flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-emerald-950/40 transition-all cursor-pointer"
+                                  >
+                                    Inspect Fixes
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 4: AUTO PR REVIEWER (Feature 2) */}
             {activeTab === 'reviewer' && (
               <div className="space-y-8 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -850,7 +792,7 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* TAB 3: CONFIGURATIONS */}
+            {/* TAB 5: CONFIGURATIONS */}
             {activeTab === 'overview' && (
               <div className="space-y-8 animate-in fade-in duration-200">
                 <div>
@@ -895,246 +837,6 @@ const Dashboard = () => {
           </>
         )}
       </main>
-
-      {/* ─── Security Findings Modal Overlay ─── */}
-      {activeRepoFindings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 md:p-6 animate-in fade-in duration-150">
-          <div className="relative max-w-3xl w-full border border-white/10 rounded-2xl bg-neutral-950 p-6 md:p-8 shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex justify-between items-start pb-4 border-b border-white/[0.08] mb-6">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h3 className="text-xl font-bold text-white">
-                    Security Findings: {activeRepoFindings.repoName}
-                  </h3>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Scan ID: <code className="font-mono text-neutral-300">{activeRepoFindings.scanId.substring(0, 8) || 'N/A'}</code>
-                  </p>
-                </div>
-                {findings.length > 0 && (
-                  <div className="border-l border-white/10 pl-4 py-1 flex items-center gap-2">
-                    <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Security Grade:</span>
-                    <span className={`text-2xl font-black ${calculateSecurityScore(findings).color}`}>
-                      {calculateSecurityScore(findings).score}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setActiveRepoFindings(null)}
-                className="text-neutral-500 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-              {activeRepoFindings.error ? (
-                <div className="border border-red-500/20 bg-red-950/10 rounded-xl p-5 space-y-2 text-xs">
-                  <h4 className="text-sm font-bold text-red-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4" /> Scan Failure Details
-                  </h4>
-                  <pre className="font-mono text-red-300/90 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-48 p-3 rounded-lg border border-red-500/10 bg-black/40">
-                    {activeRepoFindings.error}
-                  </pre>
-                </div>
-              ) : findings.length === 0 ? (
-                <div className="text-center py-12 border border-dashed border-white/[0.08] rounded-xl space-y-3 bg-neutral-900/40">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <div>
-                    <h3 className="text-sm font-bold text-white">No Vulnerabilities Detected</h3>
-                    <p className="text-neutral-500 text-xs mt-1">Excellent! Your repository code matches Aegis security standards.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Pull Request Creation Banner (Visible whenever there are fixed/resolved findings) */}
-                  {findings.some((f) => f.status === 'RESOLVED') && (
-                    <div className="border border-white/[0.08] bg-neutral-900 p-5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex-1 space-y-1">
-                        <h4 className="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
-                          🛡️ Security Fixes Ready
-                        </h4>
-                        <p className="text-xs text-neutral-300 leading-relaxed max-w-xl">
-                          Vulnerabilities have been successfully resolved by secure-bot.
-                          Click below to open a Pull Request on GitHub to review and merge the fixes.
-                        </p>
-                      </div>
-                      <div>
-                        {openedPrUrl ? (
-                          <a
-                            href={openedPrUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2.5 rounded-lg hover:underline transition-all"
-                          >
-                            🎉 View Pull Request ↗
-                          </a>
-                        ) : (
-                          <button
-                            onClick={openPR}
-                            disabled={isPrOpening}
-                            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-                          >
-                            <GitPullRequest className="w-3.5 h-3.5" />
-                            {isPrOpening ? 'Opening PR...' : '🚀 Open Pull Request'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bulk Fix Actions Section */}
-                  {findings.some((f) => f.status !== 'RESOLVED') && (
-                    <div className="border border-white/[0.08] bg-neutral-900/40 p-4 rounded-xl flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={
-                            findings.filter((f) => f.status !== 'RESOLVED').length > 0 &&
-                            findings
-                              .filter((f) => f.status !== 'RESOLVED')
-                              .every((f) => selectedFindingIds.includes(f.id))
-                          }
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              const unresolvedIds = findings
-                                .filter((f) => f.status !== 'RESOLVED')
-                                .map((f) => f.id)
-                              setSelectedFindingIds(unresolvedIds)
-                            } else {
-                              setSelectedFindingIds([])
-                            }
-                          }}
-                          className="w-4 h-4 cursor-pointer accent-white"
-                        />
-                        <span className="font-bold text-neutral-300">Select All Unresolved</span>
-                      </div>
-                      {selectedFindingIds.length > 0 && (
-                        <button
-                          onClick={handleFixSelected}
-                          disabled={fixingAll}
-                          className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-black font-bold px-3 py-1.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-                        >
-                          {fixingAll ? 'Fixing Selected...' : `Fix Selected (${selectedFindingIds.length})`}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Findings Cards List */}
-                  <div className="space-y-4">
-                    {findings.map((finding) => (
-                      <div
-                        key={finding.id}
-                        className="border border-white/[0.08] rounded-xl bg-neutral-900/50 p-5 space-y-4 hover:border-white/[0.12] transition-colors"
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2.5 flex-wrap">
-                              {finding.status !== 'RESOLVED' && (
-                                <input
-                                  type="checkbox"
-                                  checked={selectedFindingIds.includes(finding.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedFindingIds((prev) => [...prev, finding.id])
-                                    } else {
-                                      setSelectedFindingIds((prev) =>
-                                        prev.filter((id) => id !== finding.id)
-                                      )
-                                    }
-                                  }}
-                                  className="w-4 h-4 cursor-pointer accent-white"
-                                />
-                              )}
-                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                finding.severity === 'CRITICAL' || finding.severity === 'HIGH'
-                                  ? 'bg-red-950 border border-red-500/30 text-red-400'
-                                  : finding.severity === 'MEDIUM'
-                                  ? 'bg-yellow-950 border border-yellow-500/30 text-yellow-400'
-                                  : 'bg-neutral-800 border border-white/[0.06] text-neutral-400'
-                                }`}>
-                                {finding.severity}
-                              </span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-                                {finding.tool}
-                              </span>
-                            </div>
-                            <h3 className="text-base font-bold text-white tracking-tight pt-1 flex items-center gap-2">
-                              {finding.title}
-                            </h3>
-                            <code className="text-xs font-mono text-neutral-500 block truncate max-w-xl">
-                              File: {finding.filePath}:{finding.line || 1}
-                            </code>
-                          </div>
-
-                          <div className="shrink-0 pt-1">
-                            {finding.status === 'RESOLVED' ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Patched
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => handleFixFinding(finding.id)}
-                                disabled={fixingFindingId === finding.id}
-                                className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-2 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                              >
-                                {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="text-neutral-400 text-xs md:text-sm leading-relaxed border-t border-white/[0.04] pt-3">
-                          {finding.description}
-                        </p>
-
-                        {/* Collapsible code details */}
-                        {finding.status === 'RESOLVED' && fixResults[finding.id] && (
-                          <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 animate-in slide-in-from-top duration-300 bg-neutral-950 text-xs">
-                            <button
-                              onClick={() => {
-                                setExpandedFixIds((prev) => ({
-                                  ...prev,
-                                  [finding.id]: !prev[finding.id]
-                                }))
-                              }}
-                              className="w-full bg-white/[0.02] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
-                            >
-                              <span className="flex items-center gap-1.5 text-emerald-400">
-                                <Terminal className="w-3.5 h-3.5" /> AI Remediation Applied
-                              </span>
-                              {expandedFixIds[finding.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-
-                            {expandedFixIds[finding.id] && (
-                              <div className="p-4 space-y-3 animate-in fade-in duration-200">
-                                <div>
-                                  <p className="text-neutral-400 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
-                                  <p className="text-neutral-300 leading-relaxed">{fixResults[finding.id].explanation}</p>
-                                </div>
-                                <div>
-                                  <p className="text-neutral-400 font-semibold mb-1 text-[10px] uppercase tracking-wider">Patched Code Block</p>
-                                  <pre className="p-3.5 rounded-lg border border-emerald-500/20 bg-emerald-950/10 font-mono text-emerald-300/90 overflow-x-auto whitespace-pre leading-relaxed select-all">
-                                    <code>{fixResults[finding.id].code}</code>
-                                  </pre>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
