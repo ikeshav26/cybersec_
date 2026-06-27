@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 
 const FEATURES = [
   {
@@ -29,7 +29,7 @@ const FEATURES = [
       'Continuous monitoring with real-time alerts. Get notified the moment a new CVE affects your dependencies or a high-risk pattern is committed.',
     tags: ['CVE Monitoring', 'Real-time Alerts', 'Dashboards'],
   },
-];
+]
 
 export const Features: React.FC = () => {
   return (
@@ -45,8 +45,7 @@ export const Features: React.FC = () => {
         </div>
 
         <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-4 leading-tight">
-          Scan. Fix. Review.{' '}
-          <span className="text-white/40">Protect.</span>
+          Scan. Fix. Review. <span className="text-white/40">Protect.</span>
         </h2>
         <p className="text-white/40 text-base md:text-lg max-w-xl mb-16 leading-relaxed">
           Four capabilities. One GitHub App. Zero compromise on security.
@@ -63,8 +62,12 @@ export const Features: React.FC = () => {
               </span>
 
               <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-xs font-bold text-white/25 tracking-widest">{feat.number}</span>
-                <h3 className="text-2xl font-black text-white tracking-tight">{feat.title}</h3>
+                <span className="text-xs font-bold text-white/25 tracking-widest">
+                  {feat.number}
+                </span>
+                <h3 className="text-2xl font-black text-white tracking-tight">
+                  {feat.title}
+                </h3>
               </div>
 
               <p className="text-white/50 text-sm leading-relaxed mb-6">
@@ -86,7 +89,7 @@ export const Features: React.FC = () => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default Features;
+export default Features

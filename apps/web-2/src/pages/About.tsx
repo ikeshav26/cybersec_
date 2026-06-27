@@ -6,7 +6,8 @@ const About = () => {
           About Agile
         </h2>
         <p className="text-neutral-400 text-base max-w-md mx-auto">
-          We are rebuilding software project coordination from the ground up using state-of-the-art AI agents.
+          We are rebuilding software project coordination from the ground up using
+          state-of-the-art AI agents.
         </p>
       </div>
     </div>

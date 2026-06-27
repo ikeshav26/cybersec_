@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 
 const STEPS = [
   {
@@ -19,7 +19,7 @@ const STEPS = [
     description:
       'For every critical finding, Aegis opens a pull request with a ready-to-merge patch — reviewed, tested, and explained.',
   },
-];
+]
 
 export const HowItWorks: React.FC = () => {
   return (
@@ -35,8 +35,7 @@ export const HowItWorks: React.FC = () => {
         </div>
 
         <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-16 leading-tight">
-          Three steps to a{' '}
-          <span className="text-white/40">secure repo.</span>
+          Three steps to a <span className="text-white/40">secure repo.</span>
         </h2>
 
         <div className="relative">
@@ -67,7 +66,7 @@ export const HowItWorks: React.FC = () => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default HowItWorks;
+export default HowItWorks

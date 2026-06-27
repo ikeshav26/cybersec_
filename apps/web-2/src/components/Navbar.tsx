@@ -1,8 +1,8 @@
-import CardNav from './ui/CardNav';
-import type { CardNavItem } from './ui/CardNav';
+import CardNav from './ui/CardNav'
+import type { CardNavItem } from './ui/CardNav'
 
 const LOGO_SRC =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='22' viewBox='0 0 72 22'%3E%3Ctext x='0' y='17' font-family='system-ui%2C-apple-system%2Csans-serif' font-size='17' font-weight='700' letter-spacing='3' fill='white' text-rendering='optimizeLegibility'%3EAEGIS%3C/text%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='22' viewBox='0 0 72 22'%3E%3Ctext x='0' y='17' font-family='system-ui%2C-apple-system%2Csans-serif' font-size='17' font-weight='700' letter-spacing='3' fill='white' text-rendering='optimizeLegibility'%3EAEGIS%3C/text%3E%3C/svg%3E"
 
 const NAV_ITEMS: CardNavItem[] = [
   {
@@ -32,7 +32,7 @@ const NAV_ITEMS: CardNavItem[] = [
       { label: 'Contact', href: '#contact', ariaLabel: 'Contact us' },
     ],
   },
-];
+]
 
 const Navbar = () => {
   return (
@@ -48,7 +48,7 @@ const Navbar = () => {
         className="pointer-events-auto [&_.card-nav]:backdrop-blur-xl [&_.card-nav]:border [&_.card-nav]:border-white/[0.08] [&_.card-nav]:shadow-[0_4px_32px_rgba(0,0,0,0.6)]"
       />
     </div>
-  );
-};
+  )
+}
 
-export default Navbar;
+export default Navbar

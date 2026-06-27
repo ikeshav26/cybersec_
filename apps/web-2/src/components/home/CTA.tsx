@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react'
+import { Link } from 'react-router-dom'
 
 export const CTA: React.FC = () => {
   return (
@@ -26,14 +26,14 @@ export const CTA: React.FC = () => {
         </div>
 
         <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-6 leading-[1.05]">
-          Your codebase has{' '}
-          <span className="text-white/35">vulnerabilities.</span>
+          Your codebase has <span className="text-white/35">vulnerabilities.</span>
           <br />
           Aegis will find them.
         </h2>
 
         <p className="text-white/40 text-base md:text-lg max-w-xl mb-12 leading-relaxed">
-          Install in under 60 seconds. No credit card required. Works with any GitHub repository.
+          Install in under 60 seconds. No credit card required. Works with any GitHub
+          repository.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full">
@@ -43,7 +43,11 @@ export const CTA: React.FC = () => {
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-black font-bold text-base px-10 py-4 rounded-xl hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 shadow-[0_0_40px_rgba(255,255,255,0.08)] cursor-pointer"
           >
-            <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5 fill-current flex-shrink-0"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
@@ -66,7 +70,7 @@ export const CTA: React.FC = () => {
         </p>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default CTA;
+export default CTA

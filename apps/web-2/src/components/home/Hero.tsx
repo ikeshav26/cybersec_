@@ -1,9 +1,9 @@
-import React from 'react';
-import LightRays from '../ui/LightRays';
-import { Link } from 'react-router-dom';
+import React from 'react'
+import LightRays from '../ui/LightRays'
+import { Link } from 'react-router-dom'
 
 interface HeroProps {
-  className?: string;
+  className?: string
 }
 
 export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
@@ -16,7 +16,8 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
         <div
           className="absolute bottom-[-10%] left-[-15%] w-[80%] h-[120%] opacity-[0.06] blur-[160px]"
           style={{
-            background: 'radial-gradient(ellipse, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%)',
+            background:
+              'radial-gradient(ellipse, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%)',
             transform: 'skewX(12deg) rotate(8deg)',
             transformOrigin: 'bottom left',
           }}
@@ -24,7 +25,8 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
         <div
           className="absolute bottom-[-10%] right-[-15%] w-[80%] h-[120%] opacity-[0.06] blur-[160px]"
           style={{
-            background: 'radial-gradient(ellipse, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%)',
+            background:
+              'radial-gradient(ellipse, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%)',
             transform: 'skewX(-12deg) rotate(-8deg)',
             transformOrigin: 'bottom right',
           }}
@@ -33,7 +35,8 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
         <div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[70%] h-[60%] opacity-[0.07] blur-[140px]"
           style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 80%)',
+            background:
+              'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 80%)',
           }}
         />
 
@@ -86,7 +89,11 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-black font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 shadow-[0_0_30px_rgba(255,255,255,0.1)] cursor-pointer"
           >
-            <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5 fill-current flex-shrink-0"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
@@ -99,7 +106,11 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             to="/auth"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white/[0.05] text-white font-medium text-base px-8 py-3.5 rounded-xl border border-white/[0.12] hover:bg-white/[0.1] hover:border-white/25 active:scale-[0.98] transition-all duration-200 backdrop-blur-sm cursor-pointer"
           >
-            <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5 fill-current flex-shrink-0"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
@@ -109,7 +120,6 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
             Login with GitHub
           </Link>
         </div>
-
       </div>
 
       <div className="absolute bottom-7 left-8 z-10 select-none opacity-20 hover:opacity-50 transition-opacity duration-300 hidden md:block">
@@ -118,7 +128,7 @@ export const Hero: React.FC<HeroProps> = ({ className = '' }) => {
         </span>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default Hero;
+export default Hero

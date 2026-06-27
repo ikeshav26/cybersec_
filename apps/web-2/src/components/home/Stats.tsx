@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 
 const STATS = [
   { value: '10,000+', label: 'Vulnerabilities detected' },
   { value: '500+', label: 'Repositories secured' },
   { value: '< 5 min', label: 'Average scan time' },
   { value: '98%', label: 'PR merge rate on fixes' },
-];
+]
 
 export const Stats: React.FC = () => {
   return (
@@ -28,7 +28,7 @@ export const Stats: React.FC = () => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default Stats;
+export default Stats
