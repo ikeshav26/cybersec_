@@ -9,7 +9,7 @@ import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useUserStore } from './store/useUserStore'
 import { toast, Toaster } from 'react-hot-toast'
 
-const NAVBAR_HIDDEN_ROUTES = ['/auth']
+const NAVBAR_HIDDEN_ROUTES = ['/auth', '/dashboard']
 
 const App = () => {
   const location = useLocation()
