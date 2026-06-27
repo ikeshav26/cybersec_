@@ -56,12 +56,22 @@ export const syncRepos = async (req: Request, res: Response) => {
           message: 'installationId is required to register the application.',
         })
       }
-      findInstallation = await prisma.installation.create({
-        data: {
-          userId: userId,
-          installationId: installationId,
-        },
+      const existingInstallation = await prisma.installation.findUnique({
+        where: { installationId: String(installationId) },
       })
+      if (existingInstallation) {
+        findInstallation = await prisma.installation.update({
+          where: { id: existingInstallation.id },
+          data: { userId: userId },
+        })
+      } else {
+        findInstallation = await prisma.installation.create({
+          data: {
+            userId: userId,
+            installationId: String(installationId),
+          },
+        })
+      }
     }
 
     const ocktokit = await githubApp.getInstallationOctokit(
@@ -156,5 +166,47 @@ export const getRepository = async (req: Request, res: Response) => {
   } catch (err) {
     console.log(err)
     return res.status(500).json({ message: 'Failed to fetch repositories' })
+  }
+}
+
+export const getUserRepositories = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized',
+      })
+    }
+
+    const installation = await prisma.installation.findFirst({
+      where: { userId: userId },
+    })
+
+    if (!installation) {
+      return res.status(200).json({
+        success: true,
+        message: 'No installations found',
+        data: [],
+      })
+    }
+
+    const repos = await prisma.repository.findMany({
+      where: { installationId: installation.id },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Repositories fetched successfully',
+      data: repos,
+    })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch repositories',
+      error: err,
+    })
   }
 }

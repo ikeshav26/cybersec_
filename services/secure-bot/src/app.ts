@@ -13,7 +13,7 @@ const app: express.Express = express()
 
 app.use(
   cors({
-    origin: [process.env.CLIENT_URL || 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   }),
 )
