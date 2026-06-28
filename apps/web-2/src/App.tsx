@@ -15,14 +15,21 @@ const App = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const showNavbar = !NAVBAR_HIDDEN_ROUTES.includes(location.pathname)
-  const { setUser } = useUserStore()
+  const { user, setUser } = useUserStore()
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    const token = params.get('token')
+    let token = params.get('token')
+    const hasParamToken = !!token
+
+    if (!token) {
+      token = localStorage.getItem('token')
+    }
 
     if (token) {
-      localStorage.setItem('token', token)
+      if (hasParamToken) {
+        localStorage.setItem('token', token)
+      }
 
       const fetchUser = async () => {
         try {
@@ -35,25 +42,36 @@ const App = () => {
             const data = await response.json()
             if (data.user) {
               setUser(data.user)
-              toast.success(`Welcome back, ${data.user.name || data.user.username}!`)
+              if (location.pathname === '/auth' || location.pathname === '/' || hasParamToken) {
+                navigate('/dashboard')
+              }
+              if (hasParamToken) {
+                toast.success(`Welcome back, ${data.user.name || data.user.username}!`)
+              }
             }
           } else {
-            toast.error('Authentication failed')
+            localStorage.removeItem('token')
+            setUser(null)
+            if (location.pathname === '/dashboard') {
+              navigate('/auth')
+            }
           }
         } catch (error) {
           console.error('Error fetching user:', error)
         } finally {
-          params.delete('token')
-          params.delete('oauth')
-          params.delete('user')
-          const newSearch = params.toString()
-          navigate(
-            {
-              pathname: location.pathname,
-              search: newSearch ? `?${newSearch}` : ''
-            },
-            { replace: true }
-          )
+          if (hasParamToken) {
+            params.delete('token')
+            params.delete('oauth')
+            params.delete('user')
+            const newSearch = params.toString()
+            navigate(
+              {
+                pathname: location.pathname,
+                search: newSearch ? `?${newSearch}` : ''
+              },
+              { replace: true }
+            )
+          }
         }
       }
 
@@ -67,7 +85,7 @@ const App = () => {
       <main className="w-full">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={user ? <Dashboard /> : <Auth />} />
           <Route path="/features" element={<Features />} />
           <Route path="/about" element={<About />} />
           <Route path="/auth" element={<Auth />} />

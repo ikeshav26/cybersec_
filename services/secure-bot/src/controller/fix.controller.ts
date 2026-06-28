@@ -10,6 +10,7 @@ import {
   getRepoFromRepoID,
   readAndWrittingFixesBack,
   updateFindingStatus,
+  computeUnifiedDiff,
 } from '../utils/fixes/helper.js'
 
 export const fixFinding = async (req: Request, res: Response) => {
@@ -87,9 +88,11 @@ export const fixFinding = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Failed to update finding status' })
     }
 
+    const diffContent = computeUnifiedDiff(content, fixedCode)
+
     return res.status(200).json({
       message: 'Fix applied successfully',
-      code: fixedCode,
+      code: diffContent,
       explanation: explanation,
     })
   } catch (err) {

@@ -74,9 +74,12 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }: Pag
 const Dashboard = () => {
   const { user, isAuthenticated, clearUser } = useUserStore()
   const navigate = useNavigate()
-  
-  // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'repositories' | 'scans' | 'fixes' | 'reviewer' | 'overview'>('repositories')
+
+  // Dashboard Navigation State (Persisted across reloads)
+  const [activeTab, setActiveTab] = useState<'repositories' | 'scans' | 'fixes' | 'reviewer' | 'overview'>(() => {
+    const savedTab = localStorage.getItem('activeTab')
+    return (savedTab as any) || 'repositories'
+  })
   const [repos, setRepos] = useState<any[]>([])
   const [scans, setScans] = useState<any[]>([])
   const [isSyncing, setIsSyncing] = useState(false)
@@ -126,13 +129,14 @@ const Dashboard = () => {
   const [totalFixes, setTotalFixes] = useState(0)
   const [fixesScans, setFixesScans] = useState<any[]>([])
 
-  // Reset pagination when switching views
+  // Reset pagination when switching views & persist active tab state
   useEffect(() => {
     setReposPage(1)
     setReviewerPage(1)
     setScansPage(1)
     setFixesPage(1)
     setFindingsPage(1)
+    localStorage.setItem('activeTab', activeTab)
   }, [activeTab, activeScanIdForFindings])
 
   // 1. Process URL redirects & load credentials on load
@@ -642,7 +646,7 @@ const Dashboard = () => {
     if (findingsList.length === 0) return { score: 'A+', color: 'text-emerald-400' }
     const criticals = findingsList.filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH').length
     const mediums = findingsList.filter(f => f.severity === 'MEDIUM').length
-    
+
     if (criticals === 0 && mediums === 0) return { score: 'A', color: 'text-emerald-400' }
     if (criticals === 0 && mediums > 0) return { score: 'B', color: 'text-yellow-400' }
     if (criticals === 1) return { score: 'C', color: 'text-orange-400' }
@@ -703,11 +707,10 @@ const Dashboard = () => {
                     setActiveScanIdForFindings(null)
                     setActiveTab(tab.id as any)
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                    activeTab === tab.id && !activeScanIdForFindings
-                      ? 'bg-white text-black font-bold'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${activeTab === tab.id && !activeScanIdForFindings
+                      ? 'bg-white/[0.06] text-white border-l-2 border-white pl-2 rounded-l-none font-semibold'
+                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.03]'
+                    }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   {tab.label}
@@ -738,7 +741,7 @@ const Dashboard = () => {
 
       {/* ─── Right Centered Wide Content Area ─── */}
       <main className="flex-1 bg-black p-8 md:p-12 overflow-y-auto w-full max-w-[1400px] mx-auto">
-        
+
         {isPageLoading ? (
           <div className="space-y-8 animate-pulse">
             <div className="h-8 bg-neutral-900 rounded-lg w-1/3" />
@@ -796,40 +799,31 @@ const Dashboard = () => {
                 {/* Header details inside modal view */}
                 <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="space-y-1">
-                    <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-                      <Shield className="w-6 h-6 text-emerald-400" />
+                    <h1 className="text-xl font-semibold tracking-tight text-white flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-neutral-400" />
                       Findings: {repoName || 'Evaluating codebase...'}
                     </h1>
                     <p className="text-xs text-neutral-400">
                       Scan UUID: <code className="font-mono text-neutral-300 bg-white/5 px-2 py-0.5 rounded">{activeScanIdForFindings}</code>
                     </p>
                   </div>
-
-                  {findings.length > 0 && (
-                    <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] px-4 py-2.5 rounded-xl">
-                      <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Security Grade</span>
-                      <span className={`text-3xl font-black leading-none ${calculateSecurityScore(findings).color}`}>
-                        {calculateSecurityScore(findings).score}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Findings Cards List */}
+                {/* Findings GitHub-Section List */}
                 {findings.length === 0 ? (
                   <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto opacity-80" />
                     <div>
                       <h3 className="text-sm font-bold text-white">No Vulnerabilities Detected</h3>
                       <p className="text-neutral-500 text-xs mt-1">Excellent! Your repository code matches Aegis security standards.</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Bulk patch selection header */}
-                    {findings.some((f) => f.status !== 'RESOLVED') && (
-                      <div className="border border-white/[0.08] bg-neutral-950 p-4 rounded-xl flex justify-between items-center text-xs">
-                        <div className="flex items-center gap-2">
+                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
+                    {/* Header bar / Selection bar */}
+                    <div className="bg-white/[0.02] border-b border-white/[0.08] p-4 flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        {findings.some((f) => f.status !== 'RESOLVED') && (
                           <input
                             type="checkbox"
                             checked={
@@ -850,28 +844,33 @@ const Dashboard = () => {
                             }}
                             className="w-4 h-4 cursor-pointer accent-white"
                           />
-                          <span className="font-bold text-neutral-300">Select All Unresolved Findings</span>
-                        </div>
-                        {selectedFindingIds.length > 0 && (
-                          <button
-                            onClick={handleFixSelected}
-                            disabled={fixingAll}
-                            className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-black font-bold px-4 py-2 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer text-xs"
-                          >
-                            {fixingAll ? 'Fixing Selected...' : `Fix Selected (${selectedFindingIds.length})`}
-                          </button>
                         )}
+                        <span className="font-semibold text-neutral-400">
+                          {selectedFindingIds.length > 0 
+                            ? `${selectedFindingIds.length} selected` 
+                            : `${findings.filter(f => f.status !== 'RESOLVED').length} open findings`}
+                        </span>
                       </div>
-                    )}
+                      {selectedFindingIds.length > 0 && (
+                        <button
+                          onClick={handleFixSelected}
+                          disabled={fixingAll}
+                          className="inline-flex items-center gap-1.5 bg-white text-black hover:bg-neutral-200 font-semibold px-3 py-1.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer text-xs"
+                        >
+                          {fixingAll ? 'Fixing Selected...' : `Auto Fix Selected (${selectedFindingIds.length})`}
+                        </button>
+                      )}
+                    </div>
 
-                    <div className="space-y-4">
+                    {/* Findings list rows */}
+                    <div className="divide-y divide-white/[0.06]">
                       {findings.slice((findingsPage - 1) * FINDINGS_PER_PAGE, findingsPage * FINDINGS_PER_PAGE).map((finding) => (
                         <div
                           key={finding.id}
-                          className="border border-white/[0.08] rounded-xl bg-neutral-950 p-6 space-y-4 hover:border-white/[0.12] transition-colors"
+                          className="p-5 space-y-4 hover:bg-white/[0.01] transition-colors"
                         >
                           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
-                            <div className="space-y-1">
+                            <div className="space-y-1 flex-1 min-w-0">
                               <div className="flex items-center gap-2.5 flex-wrap">
                                 {finding.status !== 'RESOLVED' && (
                                   <input
@@ -889,20 +888,20 @@ const Dashboard = () => {
                                     className="w-4 h-4 cursor-pointer accent-white"
                                   />
                                 )}
-                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${
                                   finding.severity === 'CRITICAL' || finding.severity === 'HIGH'
-                                    ? 'bg-red-950 border border-red-500/30 text-red-400'
+                                    ? 'bg-red-500/10 border border-red-500/20 text-red-400'
                                     : finding.severity === 'MEDIUM'
-                                    ? 'bg-yellow-950 border border-yellow-500/30 text-yellow-400'
-                                    : 'bg-neutral-800 border border-white/[0.06] text-neutral-400'
+                                      ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
+                                      : 'bg-white/[0.05] border border-white/[0.08] text-neutral-300'
                                   }`}>
                                   {finding.severity}
                                 </span>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                                   {finding.tool}
                                 </span>
                               </div>
-                              <h3 className="text-base font-bold text-white tracking-tight pt-1">
+                              <h3 className="text-base font-semibold text-white tracking-tight pt-1">
                                 {finding.title}
                               </h3>
                               <code className="text-xs font-mono text-neutral-500 block truncate max-w-xl">
@@ -912,7 +911,7 @@ const Dashboard = () => {
 
                             <div className="shrink-0 pt-1">
                               {finding.status === 'RESOLVED' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
                                   <CheckCircle2 className="w-3.5 h-3.5" />
                                   Patched
                                 </span>
@@ -920,7 +919,7 @@ const Dashboard = () => {
                                 <button
                                   onClick={() => handleFixFinding(finding.id)}
                                   disabled={fixingFindingId === finding.id}
-                                  className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                                 >
                                   {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
                                 </button>
@@ -934,7 +933,7 @@ const Dashboard = () => {
 
                           {/* Collapsible AI fix panel */}
                           {finding.status === 'RESOLVED' && fixResults[finding.id] && (
-                            <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 bg-neutral-900 text-xs animate-in slide-in-from-top duration-200">
+                            <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 bg-neutral-900/40 text-xs animate-in slide-in-from-top duration-200">
                               <button
                                 onClick={() => {
                                   setExpandedFixIds((prev) => ({
@@ -942,7 +941,7 @@ const Dashboard = () => {
                                     [finding.id]: !prev[finding.id]
                                   }))
                                 }}
-                                className="w-full bg-white/[0.02] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
+                                className="w-full bg-white/[0.01] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
                               >
                                 <span className="flex items-center gap-1.5 text-emerald-400">
                                   <Terminal className="w-3.5 h-3.5" /> AI Remediation Applied
@@ -953,13 +952,33 @@ const Dashboard = () => {
                               {expandedFixIds[finding.id] && (
                                 <div className="p-4 space-y-3">
                                   <div>
-                                    <p className="text-neutral-400 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
+                                    <p className="text-neutral-500 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
                                     <p className="text-neutral-300 leading-relaxed font-sans">{fixResults[finding.id].explanation}</p>
                                   </div>
                                   <div>
-                                    <p className="text-neutral-400 font-semibold mb-1 text-[10px] uppercase tracking-wider">Patched Code Block</p>
-                                    <pre className="p-3.5 rounded-lg border border-emerald-500/20 bg-emerald-950/10 font-mono text-emerald-300/90 overflow-x-auto whitespace-pre leading-relaxed select-all">
-                                      <code>{fixResults[finding.id].code}</code>
+                                    <p className="text-neutral-500 font-semibold mb-2 text-[10px] uppercase tracking-wider">Patched Code Changes</p>
+                                    <pre className="p-4 rounded-xl border border-white/[0.08] bg-black font-mono text-xs overflow-x-auto leading-relaxed select-text max-h-[500px] w-full">
+                                      <code className="block space-y-0.5 w-full">
+                                        {fixResults[finding.id].code.split('\n').map((line, idx) => {
+                                          let className = "text-neutral-400 px-2 block w-full"
+                                          if (line.startsWith('+')) {
+                                            className = "text-emerald-400 bg-emerald-500/5 border-l-2 border-emerald-500 px-2 block w-full font-medium"
+                                          } else if (line.startsWith('-')) {
+                                            className = "text-rose-400 bg-rose-500/5 border-l-2 border-rose-500 px-2 block w-full font-medium"
+                                          } else if (line.startsWith('@@')) {
+                                            className = "text-neutral-500 font-bold block w-full opacity-60 px-2 border-b border-white/[0.04] pb-1 mb-1 mt-2 text-[10px]"
+                                          } else if (line.trim()) {
+                                            className = "text-neutral-300 px-2 block w-full opacity-80"
+                                          } else {
+                                            className = "h-4 block w-full"
+                                          }
+                                          return (
+                                            <span key={idx} className={className}>
+                                              {line}
+                                            </span>
+                                          )
+                                        })}
+                                      </code>
                                     </pre>
                                   </div>
                                 </div>
@@ -968,6 +987,10 @@ const Dashboard = () => {
                           )}
                         </div>
                       ))}
+                    </div>
+
+                    {/* Footer / Pagination bar */}
+                    <div className="bg-white/[0.02] border-t border-white/[0.08] p-4 flex justify-end">
                       <Pagination
                         currentPage={findingsPage}
                         totalItems={findings.length}
@@ -1059,13 +1082,12 @@ const Dashboard = () => {
                                 {scanInfo ? (
                                   <div className="flex items-center justify-center gap-2">
                                     <span
-                                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                        scanInfo.status === 'SUCCESS'
-                                          ? 'bg-emerald-950 border border-emerald-500/20 text-emerald-400'
+                                      className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanInfo.status === 'SUCCESS'
+                                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
                                           : scanInfo.status === 'FAILED'
-                                          ? 'bg-red-950 border border-red-500/20 text-red-400'
-                                          : 'bg-blue-950 border border-blue-500/20 text-blue-400'
-                                      }`}
+                                            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                            : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                                        }`}
                                     >
                                       Status: {scanInfo.status}
                                     </span>
@@ -1144,13 +1166,12 @@ const Dashboard = () => {
                             <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
                             <td className="p-4 text-center">
                               <span
-                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                  scanItem.status === 'SUCCESS'
-                                    ? 'bg-emerald-950 border border-emerald-500/20 text-emerald-400'
+                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanItem.status === 'SUCCESS'
+                                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
                                     : scanItem.status === 'FAILED'
-                                    ? 'bg-red-950 border border-red-500/20 text-red-400'
-                                    : 'bg-blue-950 border border-blue-500/20 text-blue-400'
-                                }`}
+                                      ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                      : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                                  }`}
                               >
                                 {scanItem.status}
                               </span>
@@ -1314,24 +1335,22 @@ const Dashboard = () => {
                             </td>
                             <td className="p-4 text-center font-semibold">
                               <span
-                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                  repo.prReviewer
-                                    ? 'bg-emerald-950 border border-emerald-500/20 text-emerald-400'
-                                    : 'bg-neutral-800 border border-white/[0.06] text-neutral-400'
-                                }`}
+                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${repo.prReviewer
+                                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                    : 'bg-white/[0.05] border border-white/[0.08] text-neutral-400'
+                                  }`}
                               >
-                                {repo.prReviewer ? 'Active / Enabled' : 'Disabled'}
+                                {repo.prReviewer ? 'Active' : 'Disabled'}
                               </span>
                             </td>
                             <td className="p-4 text-center">
                               <button
                                 onClick={() => handleTogglePrReviewer(repo.id)}
                                 disabled={!!togglingPrReviewer[repo.id]}
-                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                  repo.prReviewer
-                                    ? 'bg-neutral-900 border border-white/[0.06] text-neutral-400 hover:text-white'
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${repo.prReviewer
+                                    ? 'bg-neutral-900 border border-white/[0.06] text-neutral-400 hover:text-white hover:bg-neutral-800'
                                     : 'bg-white text-black hover:bg-neutral-200'
-                                }`}
+                                  }`}
                               >
                                 {togglingPrReviewer[repo.id] ? 'Updating...' : repo.prReviewer ? 'Disable Reviewer' : 'Enable Reviewer'}
                               </button>
@@ -1373,22 +1392,22 @@ const Dashboard = () => {
                   <p className="text-neutral-400 text-sm">Review your operator details and authorized credentials.</p>
                 </div>
 
-                <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-6 space-y-6">
-                  <div className="space-y-4 text-sm max-w-xl">
-                    <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
-                      <span className="text-neutral-500 font-medium">Aegis Operator UUID</span>
-                      <code className="text-neutral-300 font-mono text-xs select-all bg-white/5 px-2 py-0.5 rounded border border-white/[0.03]">
+                <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-8 max-w-2xl">
+                  <div className="divide-y divide-white/[0.06] text-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
+                      <span className="text-neutral-400 font-medium">Aegis Operator UUID</span>
+                      <code className="text-neutral-300 font-mono text-xs select-all bg-white/[0.04] px-2.5 py-1 rounded border border-white/[0.06] self-start sm:self-auto">
                         {user?.id}
                       </code>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
-                      <span className="text-neutral-500 font-medium">Email Address</span>
-                      <span className="text-neutral-300 font-semibold">{user?.email || 'Not shared'}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
+                      <span className="text-neutral-400 font-medium">Email Address</span>
+                      <span className="text-neutral-200 font-semibold">{user?.email || 'Not shared'}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-neutral-500 font-medium">GitHub App Installation</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
+                      <span className="text-neutral-400 font-medium">GitHub App Installation</span>
                       {user?.installationID && user.installationID !== 'null' ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 text-xs font-semibold bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded animate-in fade-in duration-300">
+                        <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg animate-in fade-in duration-300">
                           Active (ID: {user.installationID})
                         </span>
                       ) : (

@@ -4,6 +4,7 @@ import axios from 'axios'
 import path from 'path'
 import fs from 'fs'
 import { getMultipleCodeFixes } from '../../config/ai.js'
+import { createPatch } from 'diff'
 
 export const getFindings = async (findingIds: any) => {
   try {
@@ -111,10 +112,12 @@ export const readAndWrittingFixesBack = async (
       await fs.promises.copyFile(targetFile, `${targetFile}.bak`)
       await fs.promises.writeFile(targetFile, fixedCode, 'utf-8')
 
+      const diffContent = computeUnifiedDiff(fileContent, fixedCode)
+
       results.push({
         filePath: sanitizedPath,
         explanation,
-        fixedCode,
+        fixedCode: diffContent,
       })
     }
     return results
@@ -152,4 +155,12 @@ export const updateFindingStatus = async (ids: Array<any>) => {
     console.log(err)
     return false
   }
+}
+
+export function computeUnifiedDiff(original: string, modified: string, contextSize = 3): string {
+  // Use createPatch from standard 'diff' library
+  const patch = createPatch('file', original, modified, undefined, undefined, { context: contextSize })
+  // Strip header lines (Index: file, ===, ---, +++) to make it clean for the user
+  const lines = patch.split('\n')
+  return lines.slice(4).join('\n')
 }
