@@ -140,6 +140,11 @@ export const getScanHistory = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
+    const page = parseInt(req.query.page as string) || 1
+    const limit = parseInt(req.query.limit as string) || 9
+    const skip = (page - 1) * limit
+    const onlyResolved = req.query.onlyResolved === 'true'
+
     const appIntegrationServiceUrl =
       process.env.APP_INTEGRATION_SERVICE_BASE_URL || 'http://localhost:5001'
     const reposResponse = await axios.get(`${appIntegrationServiceUrl}/api/v1/repos`, {
@@ -151,16 +156,32 @@ export const getScanHistory = async (req: Request, res: Response) => {
     const reposList = reposResponse.data.data || []
     const repoIds = reposList.map((r: any) => r.id)
 
+    const baseWhere: any = {
+      repositoryId: { in: repoIds },
+    }
+
+    if (onlyResolved) {
+      baseWhere.findings = {
+        some: {
+          status: 'RESOLVED',
+        },
+      }
+    }
+
+    const total = await prisma.scan.count({
+      where: baseWhere,
+    })
+
     const scans = await prisma.scan.findMany({
-      where: {
-        repositoryId: { in: repoIds },
-      },
+      where: baseWhere,
       include: {
         findings: true,
       },
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take: limit,
     })
 
     const reposMap = new Map(reposList.map((r: any) => [r.id, r.repo_name]))
@@ -172,6 +193,12 @@ export const getScanHistory = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       data: formattedScans,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     })
   } catch (err) {
     console.log(err)

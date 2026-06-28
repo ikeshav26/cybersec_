@@ -214,3 +214,67 @@ export const openPullRequestForFix = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export const getPullRequestUrl = async (req: Request, res: Response) => {
+  try {
+    const scanId = req.params.scanId
+    if (!scanId) {
+      return res.status(400).json({ message: 'Scan id is required' })
+    }
+
+    const authHeader = req.headers.authorization
+    const token =
+      req.cookies.token ||
+      (authHeader && authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : authHeader)
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const scan = await prisma.scan.findUnique({
+      where: { id: String(scanId) },
+    })
+
+    if (!scan) {
+      return res.status(404).json({ message: 'Scan not found' })
+    }
+
+    const repo = await axios.get(
+      `${process.env.APP_INTEGRATION_SERVICE_URL}/api/v1/repos/${scan.repositoryId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+
+    const repoData = repo.data.data
+    const repoUrl = repoData.repo_url
+    const installationId = repoData.installationId
+
+    const repoParts = repoUrl.replace(/\/$/, '').split('/')
+    const repoName = repoParts.pop() || ''
+    const owner = repoParts.pop() || ''
+
+    const octokit = await githubApp.getInstallationOctokit(Number(installationId))
+    const headBranch = `safe-patch-${scan.id}`
+
+    const pulls = await octokit.rest.pulls.list({
+      owner,
+      repo: repoName,
+      state: 'all',
+    })
+
+    const existingPr = pulls.data.find((p) => p.head.ref === headBranch)
+
+    if (existingPr) {
+      return res.status(200).json({ prUrl: existingPr.html_url })
+    }
+
+    return res.status(404).json({ message: 'PR not found for this scan' })
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: 'Internal server error' })
+  }
+}

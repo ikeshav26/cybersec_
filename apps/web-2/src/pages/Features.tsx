@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useUserStore } from '../store/useUserStore'
-import { ArrowRight, Lock, Shield, GitPullRequest, Eye, Trash2 } from 'lucide-react'
+import { ArrowRight, Lock, Shield, Trash2 } from 'lucide-react'
 
 const Features = () => {
   const { isAuthenticated } = useUserStore()

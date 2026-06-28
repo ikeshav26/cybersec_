@@ -5,17 +5,16 @@ import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import Features from './pages/Features'
 import Home from './pages/Home'
-import FindingsPage from './pages/FindingsPage'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useUserStore } from './store/useUserStore'
 import { toast, Toaster } from 'react-hot-toast'
 
-const NAVBAR_HIDDEN_ROUTES = ['/auth', '/dashboard', '/findings']
+const NAVBAR_HIDDEN_ROUTES = ['/auth', '/dashboard']
 
 const App = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const showNavbar = !NAVBAR_HIDDEN_ROUTES.some((route) => location.pathname.startsWith(route))
+  const showNavbar = !NAVBAR_HIDDEN_ROUTES.includes(location.pathname)
   const { setUser } = useUserStore()
 
   useEffect(() => {
@@ -69,7 +68,6 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/findings/:scanId" element={<FindingsPage />} />
           <Route path="/features" element={<Features />} />
           <Route path="/about" element={<About />} />
           <Route path="/auth" element={<Auth />} />

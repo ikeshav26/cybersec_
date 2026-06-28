@@ -35,10 +35,17 @@ export async function runBackgroundScan(
     ])
 
     const findings = [...gitleaks, ...semgrep, ...trivy]
+    const filteredFindings = findings.filter((finding) => !shouldIgnore(finding.filePath))
 
-    if (findings.length > 0) {
+    console.log(
+      `Scan completed for scanId:${scanId}. Total findings: ${findings.length}, Filtered: ${
+        findings.length - filteredFindings.length
+      }`,
+    )
+
+    if (filteredFindings.length > 0) {
       await prisma.finding.createMany({
-        data: findings,
+        data: filteredFindings,
       })
     }
 
@@ -75,4 +82,27 @@ export async function runBackgroundScan(
       console.error('Cleanup failed:', cleanupErr)
     }
   }
+}
+
+function shouldIgnore(filePath: string): boolean {
+  if (!filePath) return false
+
+  // Clean the file path: strip any leading slashes and any leading repo/ or src/ prefix
+  const cleanPath = filePath.replace(/^\/?(repo|src)\//, '').replace(/^\//, '')
+
+  // Exact file names to ignore
+  const ignoreFiles = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']
+  const fileName = cleanPath.split('/').pop()
+  if (fileName && ignoreFiles.includes(fileName)) {
+    return true
+  }
+
+  // Directory names to ignore
+  const ignoreDirs = ['node_modules', 'dist', 'build', 'coverage', '.next']
+  const pathParts = cleanPath.split('/')
+  if (pathParts.some((part) => ignoreDirs.includes(part))) {
+    return true
+  }
+
+  return false
 }
