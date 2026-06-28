@@ -7,6 +7,7 @@ import githubWebhookRoutes from './routes/github.routes.js'
 import prRoutes from './routes/autoPrReviewer.routes.js'
 import cors from 'cors'
 
+
 const app: Application = express()
 
 app.use(
@@ -25,5 +26,8 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/v1', integrationRoutes)
 app.use('/api/v1/github', githubWebhookRoutes)
 app.use('/api/v1/pr-reviewer', prRoutes)
+
+
+
 
 export default app

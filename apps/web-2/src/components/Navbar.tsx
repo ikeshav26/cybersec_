@@ -1,7 +1,7 @@
 import CardNav from './ui/CardNav'
 import type { CardNavItem } from './ui/CardNav'
 import { useUserStore } from '../store/useUserStore'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 
 const LOGO_SRC =
@@ -40,6 +40,10 @@ const NAV_ITEMS: CardNavItem[] = [
 const Navbar = () => {
   const { user, isAuthenticated, clearUser } = useUserStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  if (location.pathname.includes("dashboard")) {
+    return null
+  }
 
   const ctaElement = isAuthenticated && user ? (
     <div className="hidden md:flex items-center gap-3.5 h-full px-2 pointer-events-auto">
@@ -56,7 +60,7 @@ const Navbar = () => {
           </div>
         )}
         <span className="text-xs font-semibold text-white/80 max-w-[85px] truncate">
-          {user.name || user.username}
+          {user.username || user.name}
         </span>
       </div>
       <button

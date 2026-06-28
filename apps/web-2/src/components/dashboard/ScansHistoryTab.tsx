@@ -62,10 +62,10 @@ const ScansHistoryTab = ({
                   <td className="p-4 text-center">
                     <span
                       className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanItem.status === 'SUCCESS'
-                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                          : scanItem.status === 'FAILED'
-                            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                            : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                        : scanItem.status === 'FAILED'
+                          ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                          : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
                         }`}
                     >
                       {scanItem.status}
@@ -80,9 +80,11 @@ const ScansHistoryTab = ({
                   <td className="p-4 text-center">
                     <button
                       onClick={() => setActiveScanIdForFindings(scanItem.id)}
-                      className="inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                      disabled={scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0}
+                      className={`inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0 ? 'opacity-50 disabled:cursor-not-allowed' : ''
+                        }`}
                     >
-                      📋 View Findings
+                      {scanItem.findings?.length == 0 ? 'No Findings' : 'View Findings'}
                     </button>
                   </td>
                 </tr>

@@ -663,8 +663,8 @@ const Dashboard = () => {
                     setActiveTab(tab.id as any)
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${activeTab === tab.id && !activeScanIdForFindings
-                      ? 'bg-white/[0.06] text-white border-l-2 border-white pl-2 rounded-l-none font-semibold'
-                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.03]'
+                    ? 'bg-white/[0.06] text-white border-l-2 border-white pl-2 rounded-l-none font-semibold'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.03]'
                     }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />

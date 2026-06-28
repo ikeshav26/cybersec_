@@ -17,6 +17,8 @@ const App = () => {
   const showNavbar = !NAVBAR_HIDDEN_ROUTES.includes(location.pathname)
   const { user, setUser } = useUserStore()
 
+
+
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     let token = params.get('token')
@@ -100,7 +102,7 @@ const App = () => {
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '12px',
             fontSize: '14px',
-            fontFamily: 'Geist Variable, sans-serif',
+            fontFamily: 'Playpen Sans, sans-serif',
           },
           success: {
             iconTheme: {

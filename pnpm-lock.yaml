@@ -63,6 +63,9 @@ importers:
       '@fontsource-variable/geist':
         specifier: ^5.2.9
         version: 5.2.9
+      '@ikeshav26/keep-awake':
+        specifier: ^1.0.3
+        version: 1.0.3
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.1.0(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
@@ -281,6 +284,9 @@ importers:
 
   services/app-integration-service:
     dependencies:
+      '@ikeshav26/keep-awake':
+        specifier: ^1.0.3
+        version: 1.0.3
       '@prisma/adapter-pg':
         specifier: ^7.8.0
         version: 7.8.0
@@ -977,6 +983,9 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@ikeshav26/keep-awake@1.0.3':
+    resolution: {integrity: sha512-KKs9xsEDmY4aaS6klwKrfdRrfW8RK8dXrniC4U3VFaJOeDlSljd9Z62RM3F3hjJKQhoEwBadA9wiOeD7nzhXCA==}
 
   '@img/colour@1.0.0':
     resolution: {integrity: sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw==}
@@ -3667,6 +3676,10 @@ packages:
   node-cleanup@2.1.2:
     resolution: {integrity: sha512-qN8v/s2PAJwGUtr1/hYTpNKlD6Y9rc4p8KSmJXyGdYGZsDGKXrGThikLFP9OCHFeLeEpQzPwiAtdIvBLqm//Hw==}
 
+  node-cron@4.5.0:
+    resolution: {integrity: sha512-4Trh+kjvbXokyJkwQumvD5YAgeJfgHLR/sKyu71uSmxfCR5QMO1hldpvmFZOICN5pLgNY+J5Y8+ar3XKo5/4tQ==}
+    engines: {node: '>=20'}
+
   node-gyp-build-optional-packages@5.2.2:
     resolution: {integrity: sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw==}
     hasBin: true
@@ -5297,6 +5310,10 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@ikeshav26/keep-awake@1.0.3':
+    dependencies:
+      node-cron: 4.5.0
 
   '@img/colour@1.0.0':
     optional: true
@@ -8126,6 +8143,8 @@ snapshots:
   node-abort-controller@3.1.1: {}
 
   node-cleanup@2.1.2: {}
+
+  node-cron@4.5.0: {}
 
   node-gyp-build-optional-packages@5.2.2:
     dependencies:
