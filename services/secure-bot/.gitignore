@@ -3,6 +3,8 @@ dist
 .env
 /generated/prisma
 
+fixes
+
 /src/generated/prisma
 
 /generated/prisma

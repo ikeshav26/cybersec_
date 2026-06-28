@@ -50,7 +50,7 @@ export const getRepoFromRepoID = async (req: Request, repoId: String) => {
       `${process.env.APP_INTEGRATION_SERVICE_URL}/api/v1/repos/${repoId}`,
       { headers },
     )
-    console.log('Repo found for repo ID', repo)
+    console.log('Repo found for repo ID')
     return repo
   } catch (err) {
     console.log(err)
@@ -85,40 +85,55 @@ export const readAndWrittingFixesBack = async (
   try {
     const results = []
     for (const [sanitizedPath, fileFindings] of Object.entries(findingsByFile)) {
-      const targetFile = path.join(clonePath, sanitizedPath)
-      let fileContent = ''
       try {
-        fileContent = await fs.promises.readFile(targetFile, 'utf-8')
-      } catch (e) {
-        console.error(`Failed to read file ${targetFile}:`, e)
-        continue
+        const targetFile = path.join(clonePath, sanitizedPath)
+        let fileContent = ''
+        try {
+          fileContent = await fs.promises.readFile(targetFile, 'utf-8')
+        } catch (e) {
+          console.error(`Failed to read file ${targetFile}:`, e)
+          continue
+        }
+
+        console.log(
+          `Getting fixes for file ${sanitizedPath} with ${fileFindings.length} findings...`,
+        )
+        const { explanation, fixedCode } = await getMultipleCodeFixes(
+          sanitizedPath,
+          fileContent,
+          fileFindings?.map((f: any) => ({
+            title: f.title,
+            description: f.description,
+            line: f.line ?? 1,
+          })),
+        )
+
+        if (!explanation || !fixedCode) {
+          console.error(`Failed to generate code fixes for ${sanitizedPath}`)
+          continue
+        }
+
+        if (fixedCode === fileContent) {
+          console.warn(`AI model did not make any modifications to ${sanitizedPath}`)
+          continue
+        }
+
+        console.log('Got fixes by gemini for all findings.. Now writting back to repo..')
+
+        await fs.promises.copyFile(targetFile, `${targetFile}.bak`)
+        await fs.promises.writeFile(targetFile, fixedCode, 'utf-8')
+
+        const diffContent = computeUnifiedDiff(fileContent, fixedCode)
+
+        results.push({
+          filePath: sanitizedPath,
+          explanation,
+          fixedCode: diffContent,
+          fixedFileContent: fixedCode,
+        })
+      } catch (fileErr) {
+        console.error(`Error processing fixes for ${sanitizedPath}:`, fileErr)
       }
-
-      console.log(
-        `Getting fixes for file ${sanitizedPath} with ${fileFindings.length} findings...`,
-      )
-      const { explanation, fixedCode } = await getMultipleCodeFixes(
-        sanitizedPath,
-        fileContent,
-        fileFindings?.map((f: any) => ({
-          title: f.title,
-          description: f.description,
-          line: f.line ?? 1,
-        })),
-      )
-
-      console.log('Got fixes by gemini for all findings.. Now writting back to repo..')
-
-      await fs.promises.copyFile(targetFile, `${targetFile}.bak`)
-      await fs.promises.writeFile(targetFile, fixedCode, 'utf-8')
-
-      const diffContent = computeUnifiedDiff(fileContent, fixedCode)
-
-      results.push({
-        filePath: sanitizedPath,
-        explanation,
-        fixedCode: diffContent,
-      })
     }
     return results
   } catch (err) {
@@ -153,6 +168,58 @@ export const updateFindingStatus = async (ids: Array<any>) => {
     return true
   } catch (err) {
     console.log(err)
+    return false
+  }
+}
+
+export const updateFindingFixDetails = async (id: string, diff: string, explanation: string, fixedCode: string) => {
+  try {
+    const rawDetails = {
+      fixDiff: diff,
+      fixExplanation: explanation,
+      fixedCode: fixedCode
+    }
+    
+    await prisma.finding.update({
+      where: { id },
+      data: {
+        status: 'RESOLVED',
+        rawDetails
+      }
+    })
+    return true
+  } catch (err) {
+    console.log('Error updating finding fix details:', err)
+    return false
+  }
+}
+
+export const saveFixDetailsToFindings = async (findings: Array<any>, results: Array<any>) => {
+  try {
+    for (const f of findings) {
+      const sanitizedPath = f.filePath.replace(/^\/?(repo|src)\//, '')
+      const result = results.find(r => r.filePath === sanitizedPath)
+      if (result) {
+        const rawDetails = {
+          fixDiff: result.fixedCode,
+          fixExplanation: result.explanation,
+          fixedCode: result.fixedFileContent
+        }
+        
+        await prisma.finding.update({
+          where: { id: f.id },
+          data: {
+            status: 'RESOLVED',
+            rawDetails
+          }
+        })
+      } else {
+        console.warn(`No fix was applied to ${sanitizedPath}, keeping status as OPEN.`)
+      }
+    }
+    return true
+  } catch (err) {
+    console.log('Error saving fix details to findings:', err)
     return false
   }
 }

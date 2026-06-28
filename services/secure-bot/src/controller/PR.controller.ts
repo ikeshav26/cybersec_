@@ -4,6 +4,8 @@ import axios from 'axios'
 import { App } from 'octokit'
 import path from 'path'
 import fs from 'fs'
+import { cloneRepo } from '../utils/clone-repo.js'
+import { asyncExec } from '../utils/exec.js'
 
 const githubApp = new App({
   appId: process.env.GITHUB_APP_ID!,
@@ -113,46 +115,90 @@ export const openPullRequestForFix = async (req: Request, res: Response) => {
 
     const clonePath = path.join(process.cwd(), 'fixes', scan.id)
 
-    // Commit each modified file to the new branch
+    // Re-clone repository if the local cache has been cleared
+    if (!fs.existsSync(clonePath)) {
+      console.log('Local clone path does not exist. Re-cloning repository to stage PR fixes...')
+      await cloneRepo(repoUrl, clonePath)
+    }
+
+    // Ensure all modified files are written using the database's fixedCode (which is the source of truth for resolved fixes)
     for (const sanitizedPath of findingsByFile.keys()) {
       const filePathOnDisk = path.join(clonePath, sanitizedPath)
-      if (!fs.existsSync(filePathOnDisk)) {
-        continue
+      console.log(`Applying resolved fixes for: ${sanitizedPath} from database...`)
+      const fileFindings = findingsByFile.get(sanitizedPath) || []
+      const findingWithFix = fileFindings.find(f => f.rawDetails && (f.rawDetails as any).fixedCode)
+      if (findingWithFix) {
+        const fixedCode = (findingWithFix.rawDetails as any).fixedCode
+        await fs.promises.mkdir(path.dirname(filePathOnDisk), { recursive: true })
+        await fs.promises.writeFile(filePathOnDisk, fixedCode, 'utf-8')
+        console.log(`Successfully wrote ${sanitizedPath} content from database.`)
+      } else {
+        console.warn(`Could not find saved fixedCode in database for ${sanitizedPath}.`)
+      }
+    }
+
+    try {
+      // Configure local git settings
+      await asyncExec(`git config user.name "Aegis Secure Bot"`, { cwd: clonePath })
+      await asyncExec(`git config user.email "bot@aegis.security"`, { cwd: clonePath })
+
+      // Ensure local git ignores .bak files
+      const excludePath = path.join(clonePath, '.git', 'info', 'exclude')
+      if (fs.existsSync(path.dirname(excludePath))) {
+        await fs.promises.appendFile(excludePath, '\n*.bak\n', 'utf-8')
       }
 
-      const fileContent = await fs.promises.readFile(filePathOnDisk, 'utf-8')
-
-      // Retrieve current file details (need the current blob sha for update)
-      let currentSha: string | undefined = undefined
+      // Create and checkout branch
       try {
-        const existingFile = await octokit.rest.repos.getContent({
-          owner,
-          repo: repoName,
-          path: sanitizedPath,
-          ref: headBranch,
+        await asyncExec(`git checkout -b ${headBranch}`, { cwd: clonePath })
+      } catch (err) {
+        await asyncExec(`git checkout ${headBranch}`, { cwd: clonePath })
+      }
+
+      // Add all changes
+      await asyncExec(`git add -A`, { cwd: clonePath })
+
+      // Check if we actually have changes staged
+      const { stdout: statusOut } = await asyncExec(`git status --porcelain`, { cwd: clonePath })
+      if (!statusOut.trim()) {
+        console.log('No file changes detected compared to main branch. Skipping PR.')
+        try {
+          await fs.promises.rm(clonePath, { recursive: true })
+        } catch (e) {}
+        return res.status(400).json({
+          message: 'No file changes detected compared to the main branch. Pull Request was not created.'
         })
-        if (!Array.isArray(existingFile.data) && existingFile.data.type === 'file') {
-          currentSha = existingFile.data.sha
-        }
-      } catch (e) {
-        console.log(`File ${sanitizedPath} not found in repo, creating a new file.`)
       }
 
-      console.log('Creating commit for file: ', sanitizedPath)
-      // Commit the updated file content to the new branch
-      const commitParams: any = {
-        owner,
-        repo: repoName,
-        path: sanitizedPath,
-        message: `fix: resolve vulnerabilities in ${sanitizedPath}`,
-        content: Buffer.from(fileContent).toString('base64'),
-        branch: headBranch,
-      }
-      if (currentSha) {
-        commitParams.sha = currentSha
+      // Commit changes at once (Single commit)
+      await asyncExec(`git commit -m "shield: resolve vulnerabilities in scan #${scan.id.substring(0, 8)}"`, { cwd: clonePath })
+
+      // Retrieve authentication token to push
+      const auth: any = await octokit.auth({ type: 'installation' })
+      const token = auth.token
+      const pushUrl = `https://x-access-token:${token}@github.com/${owner}/${repoName}.git`
+
+      // Force push branch to remote
+      console.log(`Pushing commit to branch ${headBranch}...`)
+      await asyncExec(`git push --force "${pushUrl}" ${headBranch}`, { cwd: clonePath })
+      console.log(`Branch ${headBranch} pushed successfully!`)
+
+    } catch (gitErr: any) {
+      console.error('Git execution failed:', gitErr)
+      try {
+        await fs.promises.rm(clonePath, { recursive: true })
+      } catch (e) {}
+
+      const errMsg = gitErr.message || String(gitErr)
+      if (errMsg.includes('.github/workflows') || errMsg.includes('workflow')) {
+        return res.status(403).json({
+          message: `Failed to push changes to GitHub. Aegis GitHub App requires the "Workflows: Read & Write" permission to update GitHub Action workflow files. Please enable it in the GitHub App settings.`
+        })
       }
 
-      await octokit.rest.repos.createOrUpdateFileContents(commitParams)
+      return res.status(500).json({
+        message: `Failed to commit/push fixes via Git: ${gitErr.message || gitErr}`
+      })
     }
 
     console.log('Creating Pull Request..')

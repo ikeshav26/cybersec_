@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useUserStore } from '../store/useUserStore'
+import { useDashboardStore } from '../store/useDashboardStore'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import {
@@ -18,59 +19,65 @@ import PrReviewerTab from '../components/dashboard/PrReviewerTab'
 import ConfigurationsTab from '../components/dashboard/ConfigurationsTab'
 import FindingsExplorer from '../components/dashboard/FindingsExplorer'
 
-interface Finding {
-  id: string
-  title: string
-  description: string
-  filePath: string
-  line?: number
-  severity: string
-  tool: string
-  status: string
-}
+
 
 const Dashboard = () => {
   const { user, isAuthenticated, clearUser } = useUserStore()
   const navigate = useNavigate()
+
+  const {
+    repos,
+    setRepos,
+    totalRepos,
+    setTotalRepos,
+    scans,
+    setScans,
+    totalScans,
+    setTotalScans,
+    fixesScans,
+    setFixesScans,
+    totalFixes,
+    setTotalFixes,
+    findings,
+    setFindings,
+    activeScanIdForFindings,
+    setActiveScanIdForFindings,
+    lastFetchedScanId,
+    setLastFetchedScanId,
+    repoName,
+    setRepoName,
+    scanStatus,
+    setScanStatus,
+    updateSingleScanStatus,
+    fixResults,
+    setFixResults,
+    expandedFixIds,
+    setExpandedFixIds,
+    selectedFindingIds,
+    setSelectedFindingIds,
+    openedPrUrl,
+    setOpenedPrUrl,
+    fixingFindingId,
+    setFixingFindingId,
+    fixingAll,
+    setFixingAll,
+    isFindingsLoading,
+    setIsFindingsLoading,
+    isPrOpening,
+    setIsPrOpening,
+    resetFindingsState,
+  } = useDashboardStore()
 
   // Dashboard Navigation State (Persisted across reloads)
   const [activeTab, setActiveTab] = useState<'repositories' | 'scans' | 'fixes' | 'reviewer' | 'overview'>(() => {
     const savedTab = localStorage.getItem('activeTab')
     return (savedTab as any) || 'repositories'
   })
-  const [repos, setRepos] = useState<any[]>([])
-  const [scans, setScans] = useState<any[]>([])
   const [isSyncing, setIsSyncing] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [isScansLoading, setIsScansLoading] = useState(false)
 
-  // Real-time scan states mapped by repository ID for active scans on the page
-  const [scanStatus, setScanStatus] = useState<
-    Record<
-      string,
-      {
-        id: string
-        status: string
-        error?: string
-        findingsCount?: number
-      }
-    >
-  >({})
-
   const [togglingPrReviewer, setTogglingPrReviewer] = useState<Record<string, boolean>>({})
-
-  // Active findings view state (if set, hides the list view and renders findings explorer keeping the sidebar visible)
-  const [activeScanIdForFindings, setActiveScanIdForFindings] = useState<string | null>(null)
-  const [findings, setFindings] = useState<Finding[]>([])
-  const [repoName, setRepoName] = useState<string>('')
-  const [isFindingsLoading, setIsFindingsLoading] = useState(false)
-  const [fixingFindingId, setFixingFindingId] = useState<string | null>(null)
-  const [fixResults, setFixResults] = useState<Record<string, { explanation: string; code: string }>>({})
-  const [expandedFixIds, setExpandedFixIds] = useState<Record<string, boolean>>({})
-  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
-  const [fixingAll, setFixingAll] = useState(false)
-  const [isPrOpening, setIsPrOpening] = useState(false)
-  const [openedPrUrl, setOpenedPrUrl] = useState<string | null>(null)
 
   // Pagination constants & states
   const SCANS_PER_PAGE = 9
@@ -82,10 +89,60 @@ const Dashboard = () => {
   const [fixesPage, setFixesPage] = useState(1)
   const [findingsPage, setFindingsPage] = useState(1)
 
-  const [totalScans, setTotalScans] = useState(0)
-  const [totalFixes, setTotalFixes] = useState(0)
-  const [totalRepos, setTotalRepos] = useState(0)
-  const [fixesScans, setFixesScans] = useState<any[]>([])
+  // 0. Auto polling effect for any running/queued scans in scans list
+  useEffect(() => {
+    const activeScans = scans.filter(s => s.status === 'QUEUED' || s.status === 'IN_PROGRESS')
+    if (activeScans.length === 0) return
+
+    const intervals = activeScans.map(s => {
+      const interval = setInterval(async () => {
+        try {
+          const token = localStorage.getItem('token')
+          const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/scan/status/${s.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data) {
+              const updatedScan = data.data
+              if (updatedScan.status !== s.status) {
+                // Update in scans list
+                setScans(scans.map(item => item.id === s.id ? { ...item, status: updatedScan.status, error: updatedScan.error } : item))
+                
+                // If it is also mapped in scanStatus (active repositories tab), update it there!
+                const matchedRepo = repos.find(r => r.id === s.repositoryId)
+                if (matchedRepo) {
+                  updateSingleScanStatus(matchedRepo.id, {
+                    id: s.id,
+                    status: updatedScan.status,
+                    error: updatedScan.error || undefined,
+                    findingsCount: updatedScan.findings?.length || 0
+                  })
+                }
+
+                if (updatedScan.status === 'SUCCESS') {
+                  toast.success(`Scan ${s.id.substring(0, 8)} completed successfully!`)
+                  fetchScanHistory(scansPage)
+                } else if (updatedScan.status === 'FAILED') {
+                  toast.error(`Scan ${s.id.substring(0, 8)} failed: ${updatedScan.error || 'Unknown error'}`)
+                  fetchScanHistory(scansPage)
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error auto-polling scan status:', err)
+        }
+      }, 3000)
+      return { interval, scanId: s.id }
+    })
+
+    return () => {
+      intervals.forEach(i => clearInterval(i.interval))
+    }
+  }, [scans, scansPage, repos])
 
   // Reset pagination when switching views & persist active tab state
   useEffect(() => {
@@ -147,9 +204,12 @@ const Dashboard = () => {
   // Load findings details when activeScanIdForFindings is set
   useEffect(() => {
     if (activeScanIdForFindings) {
-      fetchScanFindings(activeScanIdForFindings)
+      // Only fetch if findings are empty OR we switched to a different scan ID to preserve active fix loading states!
+      if (activeScanIdForFindings !== lastFetchedScanId || findings.length === 0) {
+        fetchScanFindings(activeScanIdForFindings)
+      }
     }
-  }, [activeScanIdForFindings])
+  }, [activeScanIdForFindings, lastFetchedScanId, findings.length])
 
   const loadReposFromDb = async (page = (activeTab === 'reviewer' ? reviewerPage : reposPage)) => {
     try {
@@ -232,13 +292,27 @@ const Dashboard = () => {
   const fetchScanFindings = async (scanId: string) => {
     try {
       setIsFindingsLoading(true)
+      resetFindingsState()
       setFindings([])
-      setSelectedFindingIds([])
-      setFixResults({})
-      setExpandedFixIds({})
-      setOpenedPrUrl(null)
 
       const token = localStorage.getItem('token')
+
+      try {
+        const prRes = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/pr/pr-url/${scanId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        if (prRes.ok) {
+          const prData = await prRes.json()
+          if (prData.prUrl) {
+            setOpenedPrUrl(prData.prUrl)
+          }
+        }
+      } catch (prErr) {
+        console.warn('Error fetching PR URL on findings page load:', prErr)
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SECURE_BOT_URL}/api/secure-bot/scan/status/${scanId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -249,6 +323,7 @@ const Dashboard = () => {
         if (data.success && data.data) {
           const scanData = data.data
           setFindings(scanData.findings || [])
+          setLastFetchedScanId(scanId)
 
           const repo = repos.find(r => r.id === scanData.repositoryId)
           if (repo) {
@@ -461,11 +536,15 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json()
         toast.success('Fix applied successfully!')
+        
+        const explanationText = data.explanation || 'Remediation completed by securing the codebase logic.'
+        const codeDiff = data.code || ''
+
         setFixResults((prev) => ({
           ...prev,
           [findingId]: {
-            explanation: data.explanation || 'Remediation completed by securing the codebase logic.',
-            code: data.code || ''
+            explanation: explanationText,
+            code: codeDiff
           }
         }))
         setExpandedFixIds((prev) => ({
@@ -473,7 +552,14 @@ const Dashboard = () => {
           [findingId]: true
         }))
         setFindings((prev) =>
-          prev.map((f) => (f.id === findingId ? { ...f, status: 'RESOLVED' } : f))
+          prev.map((f) => (f.id === findingId ? {
+            ...f,
+            status: 'RESOLVED',
+            rawDetails: {
+              fixDiff: codeDiff,
+              fixExplanation: explanationText
+            }
+          } : f))
         )
       } else {
         toast.error('Failed to apply automated patch')
@@ -507,10 +593,6 @@ const Dashboard = () => {
         const resData = await response.json()
         toast.success('Bulk fixes generated successfully!')
 
-        setFindings((prev) =>
-          prev.map((f) => (selectedFindingIds.includes(f.id) ? { ...f, status: 'RESOLVED' } : f))
-        )
-
         const newFixResults = { ...fixResults }
         const newExpandedFixIds = { ...expandedFixIds }
 
@@ -532,6 +614,22 @@ const Dashboard = () => {
             })
           })
         }
+
+        setFindings((prev) =>
+          prev.map((f) => {
+            if (selectedFindingIds.includes(f.id)) {
+              return {
+                ...f,
+                status: 'RESOLVED',
+                rawDetails: {
+                  fixDiff: newFixResults[f.id]?.code || '',
+                  fixExplanation: newFixResults[f.id]?.explanation || ''
+                }
+              }
+            }
+            return f
+          })
+        )
 
         setFixResults(newFixResults)
         setExpandedFixIds(newExpandedFixIds)
@@ -731,6 +829,7 @@ const Dashboard = () => {
             openedPrUrl={openedPrUrl}
             handleInspectFixes={handleInspectFixes}
             setActiveScanIdForFindings={setActiveScanIdForFindings}
+            onRefresh={() => fetchScanFindings(activeScanIdForFindings)}
           />
         ) : (
           <>
@@ -786,6 +885,7 @@ const Dashboard = () => {
                 handleSync={handleSync}
                 handleTogglePrReviewer={handleTogglePrReviewer}
                 togglingPrReviewer={togglingPrReviewer}
+                user={user}
               />
             )}
 

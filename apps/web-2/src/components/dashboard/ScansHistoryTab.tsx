@@ -84,7 +84,7 @@ const ScansHistoryTab = ({
                       className={`inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0 ? 'opacity-50 disabled:cursor-not-allowed' : ''
                         }`}
                     >
-                      {scanItem.findings?.length == 0 ? 'No Findings' : 'View Findings'}
+                      {scanItem.findings?.length == 0 ? 'No Findings' : scanItem.status === "IN_PROGRESS" ? "Scanning..." : "View Findings"}
                     </button>
                   </td>
                 </tr>

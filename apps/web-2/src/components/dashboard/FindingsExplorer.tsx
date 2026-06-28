@@ -1,5 +1,5 @@
 import React from 'react'
-import { Shield, CheckCircle2, Terminal, GitPullRequest, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react'
+import { Shield, CheckCircle2, Terminal, GitPullRequest, ArrowLeft, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react'
 import Pagination from '../ui/Pagination'
 
 interface Finding {
@@ -35,6 +35,7 @@ interface FindingsExplorerProps {
   openedPrUrl: string | null
   handleInspectFixes: (scanId: string) => void
   setActiveScanIdForFindings: (scanId: string | null) => void
+  onRefresh: () => void
 }
 
 const FindingsExplorer = ({
@@ -58,8 +59,31 @@ const FindingsExplorer = ({
   isPrOpening,
   openedPrUrl,
   handleInspectFixes,
-  setActiveScanIdForFindings
+  setActiveScanIdForFindings,
+  onRefresh
 }: FindingsExplorerProps) => {
+  const sortedFindings = React.useMemo(() => {
+    return [...findings].sort((a, b) => {
+      if (a.status === 'RESOLVED' && b.status !== 'RESOLVED') return -1
+      if (a.status !== 'RESOLVED' && b.status === 'RESOLVED') return 1
+      return 0
+    })
+  }, [findings])
+
+  const getFixDetails = (finding: Finding) => {
+    if (fixResults[finding.id]) {
+      return fixResults[finding.id]
+    }
+    const raw = (finding as any).rawDetails
+    if (raw && raw.fixDiff) {
+      return {
+        code: raw.fixDiff,
+        explanation: raw.fixExplanation || 'Remediation completed by securing the codebase logic.'
+      }
+    }
+    return null
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Back button & Action Header bar */}
@@ -115,6 +139,14 @@ const FindingsExplorer = ({
                 Scan UUID: <code className="font-mono text-neutral-300 bg-white/5 px-2 py-0.5 rounded">{activeScanIdForFindings}</code>
               </p>
             </div>
+            <button
+              onClick={onRefresh}
+              disabled={isFindingsLoading}
+              className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-3 py-2 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFindingsLoading ? 'animate-spin' : ''}`} />
+              Check Live Status
+            </button>
           </div>
 
           {/* Findings GitHub-Section List */}
@@ -131,7 +163,7 @@ const FindingsExplorer = ({
               {/* Header bar / Selection bar */}
               <div className="bg-white/[0.02] border-b border-white/[0.08] p-4 flex justify-between items-center text-xs">
                 <div className="flex items-center gap-2">
-                  {findings.some((f) => f.status !== 'RESOLVED') && (
+                  {!openedPrUrl && findings.some((f) => f.status !== 'RESOLVED') && (
                     <input
                       type="checkbox"
                       checked={
@@ -154,12 +186,14 @@ const FindingsExplorer = ({
                     />
                   )}
                   <span className="font-semibold text-neutral-400">
-                    {selectedFindingIds.length > 0 
-                      ? `${selectedFindingIds.length} selected` 
-                      : `${findings.filter(f => f.status !== 'RESOLVED').length} open findings`}
+                    {openedPrUrl 
+                      ? `${findings.filter(f => f.status !== 'RESOLVED').length} open findings (Fixes frozen due to open PR)`
+                      : (selectedFindingIds.length > 0 
+                          ? `${selectedFindingIds.length} selected` 
+                          : `${findings.filter(f => f.status !== 'RESOLVED').length} open findings`)}
                   </span>
                 </div>
-                {selectedFindingIds.length > 0 && (
+                {!openedPrUrl && selectedFindingIds.length > 0 && (
                   <button
                     onClick={handleFixSelected}
                     disabled={fixingAll}
@@ -172,7 +206,7 @@ const FindingsExplorer = ({
 
               {/* Findings list rows */}
               <div className="divide-y divide-white/[0.06]">
-                {findings.slice((findingsPage - 1) * FINDINGS_PER_PAGE, findingsPage * FINDINGS_PER_PAGE).map((finding) => (
+                {sortedFindings.slice((findingsPage - 1) * FINDINGS_PER_PAGE, findingsPage * FINDINGS_PER_PAGE).map((finding) => (
                   <div
                     key={finding.id}
                     className="p-5 space-y-4 hover:bg-white/[0.01] transition-colors"
@@ -180,7 +214,7 @@ const FindingsExplorer = ({
                     <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          {finding.status !== 'RESOLVED' && (
+                          {!openedPrUrl && finding.status !== 'RESOLVED' && (
                             <input
                               type="checkbox"
                               checked={selectedFindingIds.includes(finding.id)}
@@ -219,18 +253,40 @@ const FindingsExplorer = ({
 
                       <div className="shrink-0 pt-1">
                         {finding.status === 'RESOLVED' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Patched
-                          </span>
+                          (() => {
+                            const isExpanded = expandedFixIds[finding.id] !== false
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Patched
+                                </span>
+                                {getFixDetails(finding) && (
+                                  <button
+                                    onClick={() => {
+                                      setExpandedFixIds((prev) => ({
+                                        ...prev,
+                                        [finding.id]: !isExpanded
+                                      }))
+                                    }}
+                                    className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-[0.98]"
+                                  >
+                                    {isExpanded ? 'Hide Diffs' : 'Check Diffs'}
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })()
                         ) : (
-                          <button
-                            onClick={() => handleFixFinding(finding.id)}
-                            disabled={fixingFindingId === finding.id}
-                            className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                          >
-                            {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
-                          </button>
+                          !openedPrUrl && (
+                            <button
+                              onClick={() => handleFixFinding(finding.id)}
+                              disabled={fixingFindingId === finding.id}
+                              className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                            >
+                              {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -240,59 +296,62 @@ const FindingsExplorer = ({
                     </p>
 
                     {/* Collapsible AI fix panel */}
-                    {finding.status === 'RESOLVED' && fixResults[finding.id] && (
-                      <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 bg-neutral-900/40 text-xs animate-in slide-in-from-top duration-200">
-                        <button
-                          onClick={() => {
-                            setExpandedFixIds((prev) => ({
-                              ...prev,
-                              [finding.id]: !prev[finding.id]
-                            }))
-                          }}
-                          className="w-full bg-white/[0.01] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
-                        >
-                          <span className="flex items-center gap-1.5 text-emerald-400">
-                            <Terminal className="w-3.5 h-3.5" /> AI Remediation Applied
-                          </span>
-                          {expandedFixIds[finding.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
+                    {finding.status === 'RESOLVED' && getFixDetails(finding) && (() => {
+                      const isExpanded = expandedFixIds[finding.id] !== false
+                      return (
+                        <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 bg-neutral-900/40 text-xs animate-in slide-in-from-top duration-200">
+                          <button
+                            onClick={() => {
+                              setExpandedFixIds((prev) => ({
+                                ...prev,
+                                [finding.id]: !isExpanded
+                              }))
+                            }}
+                            className="w-full bg-white/[0.01] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
+                          >
+                            <span className="flex items-center gap-1.5 text-emerald-400">
+                              <Terminal className="w-3.5 h-3.5" /> AI Remediation Applied
+                            </span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
 
-                        {expandedFixIds[finding.id] && (
-                          <div className="p-4 space-y-3">
-                            <div>
-                              <p className="text-neutral-500 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
-                              <p className="text-neutral-300 leading-relaxed font-sans">{fixResults[finding.id].explanation}</p>
+                          {isExpanded && (
+                            <div className="p-4 space-y-3">
+                              <div>
+                                <p className="text-neutral-500 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
+                                <p className="text-neutral-300 leading-relaxed font-sans">{getFixDetails(finding)!.explanation}</p>
+                              </div>
+                              <div>
+                                <p className="text-neutral-500 font-semibold mb-2 text-[10px] uppercase tracking-wider">Patched Code Changes</p>
+                                <pre className="p-4 rounded-xl border border-white/[0.08] bg-black font-mono text-xs overflow-x-auto leading-relaxed select-text max-h-[500px] w-full">
+                                  <code className="block space-y-0.5 w-full">
+                                    {getFixDetails(finding)!.code.split('\n').map((line: string, idx: number) => {
+                                      let className = "text-neutral-400 px-2 block w-full"
+                                      if (line.startsWith('+')) {
+                                        className = "text-emerald-400 bg-emerald-500/5 border-l-2 border-emerald-500 px-2 block w-full font-medium"
+                                      } else if (line.startsWith('-')) {
+                                        className = "text-rose-400 bg-rose-500/5 border-l-2 border-rose-500 px-2 block w-full font-medium"
+                                      } else if (line.startsWith('@@')) {
+                                        className = "text-neutral-500 font-bold block w-full opacity-60 px-2 border-b border-white/[0.04] pb-1 mb-1 mt-2 text-[10px]"
+                                      } else if (line.trim()) {
+                                        className = "text-neutral-300 px-2 block w-full opacity-80"
+                                      } else {
+                                        className = "h-4 block w-full"
+                                      }
+                                      return (
+                                        <span key={idx} className={className}>
+                                          {line}
+                                        </span>
+                                      )
+                                    })}
+                                  </code>
+                                </pre>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-neutral-500 font-semibold mb-2 text-[10px] uppercase tracking-wider">Patched Code Changes</p>
-                              <pre className="p-4 rounded-xl border border-white/[0.08] bg-black font-mono text-xs overflow-x-auto leading-relaxed select-text max-h-[500px] w-full">
-                                <code className="block space-y-0.5 w-full">
-                                  {fixResults[finding.id].code.split('\n').map((line, idx) => {
-                                    let className = "text-neutral-400 px-2 block w-full"
-                                    if (line.startsWith('+')) {
-                                      className = "text-emerald-400 bg-emerald-500/5 border-l-2 border-emerald-500 px-2 block w-full font-medium"
-                                    } else if (line.startsWith('-')) {
-                                      className = "text-rose-400 bg-rose-500/5 border-l-2 border-rose-500 px-2 block w-full font-medium"
-                                    } else if (line.startsWith('@@')) {
-                                      className = "text-neutral-500 font-bold block w-full opacity-60 px-2 border-b border-white/[0.04] pb-1 mb-1 mt-2 text-[10px]"
-                                    } else if (line.trim()) {
-                                      className = "text-neutral-300 px-2 block w-full opacity-80"
-                                    } else {
-                                      className = "h-4 block w-full"
-                                    }
-                                    return (
-                                      <span key={idx} className={className}>
-                                        {line}
-                                      </span>
-                                    )
-                                  })}
-                                </code>
-                              </pre>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>

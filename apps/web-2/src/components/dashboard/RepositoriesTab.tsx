@@ -32,23 +32,34 @@ const RepositoriesTab = ({
           <p className="text-neutral-400 text-sm">Run sandbox vulnerability evaluations, generate secure patches, and stage PRs.</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Sync Repositories'}
-          </button>
-          {user?.installationID && (
+          {user?.installationID ? (
+            <>
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Repositories'}
+              </button>
+              <a
+                href={`https://github.com/settings/installations/${user.installationID}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all"
+              >
+                Configure Repositories
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </>
+          ) : (
             <a
-              href={`https://github.com/settings/installations/${user.installationID}`}
+              href="https://github.com/apps/aegisbykeshav"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all cursor-pointer"
             >
-              Configure Repositories
-              <ExternalLink className="w-3.5 h-3.5" />
+              Install Aegis App
             </a>
           )}
         </div>
@@ -58,15 +69,32 @@ const RepositoriesTab = ({
         <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
           <Database className="w-8 h-8 text-neutral-600 mx-auto animate-pulse" />
           <div>
-            <h3 className="text-sm font-bold text-white">No Repositories Synced</h3>
-            <p className="text-neutral-500 text-xs mt-1">Please configure the GitHub App and click sync repositories to import them.</p>
+            <h3 className="text-sm font-bold text-white">
+              {user?.installationID ? 'No Repositories Synced' : 'GitHub App Not Installed'}
+            </h3>
+            <p className="text-neutral-500 text-xs mt-1">
+              {user?.installationID
+                ? 'Please configure the GitHub App and click sync repositories to import them.'
+                : 'Please install the Aegis GitHub App to grant access to your repositories.'}
+            </p>
           </div>
-          <button
-            onClick={handleSync}
-            className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
-          >
-            Sync Repositories
-          </button>
+          {user?.installationID ? (
+            <button
+              onClick={handleSync}
+              className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
+            >
+              Sync Repositories
+            </button>
+          ) : (
+            <a
+              href="https://github.com/apps/aegisbykeshav"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2 rounded-lg active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Install Aegis App
+            </a>
+          )}
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">

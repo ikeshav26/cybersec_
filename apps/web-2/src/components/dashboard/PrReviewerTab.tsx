@@ -10,6 +10,7 @@ interface PrReviewerTabProps {
   handleSync: () => void
   handleTogglePrReviewer: (repoId: string) => void
   togglingPrReviewer: Record<string, boolean>
+  user: any
 }
 
 const PrReviewerTab = ({
@@ -20,7 +21,8 @@ const PrReviewerTab = ({
   isSyncing,
   handleSync,
   handleTogglePrReviewer,
-  togglingPrReviewer
+  togglingPrReviewer,
+  user
 }: PrReviewerTabProps) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -29,29 +31,57 @@ const PrReviewerTab = ({
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">AI Pull Request Reviewer</h1>
           <p className="text-neutral-400 text-sm">Toggle automated, continuous AI-driven review comments on your GitHub Pull Requests.</p>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? 'Syncing...' : 'Sync Repositories'}
-        </button>
+        {user?.installationID ? (
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing...' : 'Sync Repositories'}
+          </button>
+        ) : (
+          <a
+            href="https://github.com/apps/aegisbykeshav"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all cursor-pointer"
+          >
+            Install Aegis App
+          </a>
+        )}
       </div>
 
       {repos.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
           <Database className="w-8 h-8 text-neutral-600 mx-auto animate-pulse" />
           <div>
-            <h3 className="text-sm font-bold text-white">No Repositories Synced</h3>
-            <p className="text-neutral-500 text-xs mt-1">Please configure the GitHub App and click sync repositories to import them.</p>
+            <h3 className="text-sm font-bold text-white">
+              {user?.installationID ? 'No Repositories Synced' : 'GitHub App Not Installed'}
+            </h3>
+            <p className="text-neutral-500 text-xs mt-1">
+              {user?.installationID
+                ? 'Please configure the GitHub App and click sync repositories to import them.'
+                : 'Please install the Aegis GitHub App to grant access to your repositories.'}
+            </p>
           </div>
-          <button
-            onClick={handleSync}
-            className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
-          >
-            Sync Repositories
-          </button>
+          {user?.installationID ? (
+            <button
+              onClick={handleSync}
+              className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
+            >
+              Sync Repositories
+            </button>
+          ) : (
+            <a
+              href="https://github.com/apps/aegisbykeshav"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2 rounded-lg active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Install Aegis App
+            </a>
+          )}
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">

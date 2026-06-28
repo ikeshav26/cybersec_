@@ -38,8 +38,7 @@ export async function runBackgroundScan(
     const filteredFindings = findings.filter((finding) => !shouldIgnore(finding.filePath))
 
     console.log(
-      `Scan completed for scanId:${scanId}. Total findings: ${findings.length}, Filtered: ${
-        findings.length - filteredFindings.length
+      `Scan completed for scanId:${scanId}. Total findings: ${findings.length}, Filtered: ${findings.length - filteredFindings.length
       }`,
     )
 
@@ -93,7 +92,7 @@ function shouldIgnore(filePath: string): boolean {
   // Exact file names to ignore
   const ignoreFiles = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']
   const fileName = cleanPath.split('/').pop()
-  if (fileName && ignoreFiles.includes(fileName)) {
+  if (fileName && (ignoreFiles.includes(fileName) || fileName.endsWith('.bak'))) {
     return true
   }
 

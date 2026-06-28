@@ -11,6 +11,8 @@ import {
   readAndWrittingFixesBack,
   updateFindingStatus,
   computeUnifiedDiff,
+  updateFindingFixDetails,
+  saveFixDetailsToFindings,
 } from '../utils/fixes/helper.js'
 
 export const fixFinding = async (req: Request, res: Response) => {
@@ -40,10 +42,9 @@ export const fixFinding = async (req: Request, res: Response) => {
     const repoUrl = repo.data.data.repo_url
 
     const clonePath = path.join(process.cwd(), 'fixes', finding.scan.id)
-    if (fs.existsSync(clonePath)) {
-      await fs.promises.rm(clonePath, { recursive: true, force: true })
+    if (!fs.existsSync(clonePath)) {
+      await cloneRepo(repoUrl, clonePath)
     }
-    await cloneRepo(repoUrl, clonePath)
 
     console.log('Cloning complete to path: ', clonePath)
 
@@ -72,6 +73,10 @@ export const fixFinding = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Could not generate fix' })
     }
 
+    if (fixedCode === content) {
+      return res.status(400).json({ message: 'AI model did not make any modifications to the code. No fix was applied.' })
+    }
+
     console.log('Fix generated successfully..')
     //update code
     const fixedFilePath = path.join(
@@ -82,13 +87,13 @@ export const fixFinding = async (req: Request, res: Response) => {
     await fs.promises.copyFile(fixedFilePath, `${fixedFilePath}.bak`)
     await fs.promises.writeFile(fixedFilePath, fixedCode, 'utf-8')
 
+    const diffContent = computeUnifiedDiff(content, fixedCode)
+
     // Update status in DB
-    const isUpdated = await updateFindingStatus([finding.id])
+    const isUpdated = await updateFindingFixDetails(finding.id, diffContent, explanation, fixedCode)
     if (!isUpdated) {
       return res.status(400).json({ message: 'Failed to update finding status' })
     }
-
-    const diffContent = computeUnifiedDiff(content, fixedCode)
 
     return res.status(200).json({
       message: 'Fix applied successfully',
@@ -123,10 +128,9 @@ export const fixAllFindings = async (req: Request, res: Response) => {
     }
     const repoUrl = repo.data.data.repo_url
     const clonePath = path.join(process.cwd(), 'fixes', firstFinding!.scan.id)
-    if (fs.existsSync(clonePath)) {
-      await fs.promises.rm(clonePath, { recursive: true, force: true })
+    if (!fs.existsSync(clonePath)) {
+      await cloneRepo(repoUrl, clonePath)
     }
-    await cloneRepo(repoUrl, clonePath)
     console.log('Cloning complete to path: ', clonePath)
 
     //step-3 (reading files and writting fixes back to files)
@@ -138,7 +142,7 @@ export const fixAllFindings = async (req: Request, res: Response) => {
     console.log('Updations done..Updating findings status to Resolved..')
 
     // step-4 (update finding status)
-    const isUpdated = await updateFindingStatus(ids)
+    const isUpdated = await saveFixDetailsToFindings(findings, results)
     if (!isUpdated) {
       return res.status(400).json({ message: 'Failed to update findings status' })
     }

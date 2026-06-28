@@ -5,6 +5,13 @@ const client = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
 })
 
+const geminiClient = process.env.GEMINI_API_KEY
+  ? new OpenAI({
+      baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      apiKey: process.env.GEMINI_API_KEY,
+    })
+  : null
+
 function cleanJsonResponse(text: string): string {
   let cleaned = text.trim()
   if (cleaned.startsWith('```')) {
@@ -17,11 +24,37 @@ function cleanJsonResponse(text: string): string {
 async function callOpenRouterWithFallback(
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
 ): Promise<string> {
+  // Try native Google Gemini endpoint first using GEMINI_API_KEY
+  if (geminiClient) {
+    const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash']
+    for (const model of geminiModels) {
+      try {
+        console.log(`[Gemini API] Attempting completion with model: ${model}`)
+        const response = await geminiClient.chat.completions.create({
+          model,
+          messages,
+        })
+        const text = response.choices[0]?.message?.content
+        if (text) {
+          console.log(`[Gemini API] Successfully got response from model: ${model}`)
+          return text
+        }
+      } catch (error: any) {
+        console.warn(
+          `[Gemini API] Model ${model} failed:`,
+          error.message || error,
+        )
+      }
+    }
+  }
+
+  // Fallback to OpenRouter free models
   const models = [
-    'google/gemma-4-31b-it:free',
     'qwen/qwen3-coder:free',
+    'google/gemma-4-31b-it:free',
     'meta-llama/llama-3.3-70b-instruct:free',
     'openrouter/free',
+    'meta-llama/llama-3.2-3b-instruct:free',
   ]
 
   let lastError: any = null
