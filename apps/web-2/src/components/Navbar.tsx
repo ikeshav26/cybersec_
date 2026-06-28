@@ -32,7 +32,7 @@ const NAV_ITEMS: CardNavItem[] = [
     textColor: '#ffffff',
     links: [
       { label: 'GitHub', href: 'https://github.com/ikeshav26/cybersec_', ariaLabel: 'GitHub Repository' },
-      { label: 'Contact', href: '#contact', ariaLabel: 'Contact us' },
+      { label: 'Contact', href: 'mailto:keshavgilhotra4@gmail.com', ariaLabel: 'Contact us' },
     ],
   },
 ]

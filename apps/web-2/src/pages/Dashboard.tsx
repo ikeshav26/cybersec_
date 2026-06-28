@@ -4,20 +4,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import {
   Shield,
-  Database,
   Home,
   LogOut,
-  RefreshCw,
-  Play,
-  CheckCircle2,
   User,
-  ExternalLink,
-  Terminal,
   GitPullRequest,
-  ChevronDown,
-  ChevronUp,
-  ArrowLeft
+  Database,
+  CheckCircle2
 } from 'lucide-react'
+import RepositoriesTab from '../components/dashboard/RepositoriesTab'
+import ScansHistoryTab from '../components/dashboard/ScansHistoryTab'
+import FixesConsoleTab from '../components/dashboard/FixesConsoleTab'
+import PrReviewerTab from '../components/dashboard/PrReviewerTab'
+import ConfigurationsTab from '../components/dashboard/ConfigurationsTab'
+import FindingsExplorer from '../components/dashboard/FindingsExplorer'
 
 interface Finding {
   id: string
@@ -28,47 +27,6 @@ interface Finding {
   severity: string
   tool: string
   status: string
-}
-
-interface PaginationProps {
-  currentPage: number
-  totalItems: number
-  itemsPerPage: number
-  onPageChange: (page: number) => void
-}
-
-const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }: PaginationProps) => {
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
-  if (totalPages <= 1) return null
-
-  return (
-    <div className="flex items-center justify-between border-t border-white/[0.08] bg-white/[0.01] px-6 py-4">
-      <div className="text-xs text-neutral-400">
-        Showing <span className="font-semibold text-white">{Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1)}</span> to{' '}
-        <span className="font-semibold text-white">{Math.min(totalItems, currentPage * itemsPerPage)}</span> of{' '}
-        <span className="font-semibold text-white">{totalItems}</span> entries
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.02] text-xs font-bold text-neutral-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-        >
-          Previous
-        </button>
-        <div className="text-xs text-neutral-400 font-medium px-2">
-          Page <span className="text-white font-bold">{currentPage}</span> of <span className="text-white font-bold">{totalPages}</span>
-        </div>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.02] text-xs font-bold text-neutral-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 }
 
 const Dashboard = () => {
@@ -115,7 +73,6 @@ const Dashboard = () => {
   const [openedPrUrl, setOpenedPrUrl] = useState<string | null>(null)
 
   // Pagination constants & states
-  const ITEMS_PER_PAGE = 5
   const SCANS_PER_PAGE = 9
   const FINDINGS_PER_PAGE = 5
 
@@ -127,6 +84,7 @@ const Dashboard = () => {
 
   const [totalScans, setTotalScans] = useState(0)
   const [totalFixes, setTotalFixes] = useState(0)
+  const [totalRepos, setTotalRepos] = useState(0)
   const [fixesScans, setFixesScans] = useState<any[]>([])
 
   // Reset pagination when switching views & persist active tab state
@@ -165,22 +123,26 @@ const Dashboard = () => {
 
     const token = localStorage.getItem('token')
     if (token) {
-      loadReposFromDb()
+      loadReposFromDb(1)
     } else {
       setIsPageLoading(false)
     }
   }, [isAuthenticated])
 
-  // Fetch scans history when relevant tab or page changes
+  // Fetch repos, scans history, or fixes when relevant tab or page changes
   useEffect(() => {
     if (isAuthenticated) {
-      if (activeTab === 'scans') {
+      if (activeTab === 'repositories') {
+        loadReposFromDb(reposPage)
+      } else if (activeTab === 'reviewer') {
+        loadReposFromDb(reviewerPage)
+      } else if (activeTab === 'scans') {
         fetchScanHistory(scansPage)
       } else if (activeTab === 'fixes') {
         fetchFixesHistory(fixesPage)
       }
     }
-  }, [activeTab, scansPage, fixesPage, isAuthenticated])
+  }, [activeTab, scansPage, fixesPage, reposPage, reviewerPage, isAuthenticated])
 
   // Load findings details when activeScanIdForFindings is set
   useEffect(() => {
@@ -189,12 +151,12 @@ const Dashboard = () => {
     }
   }, [activeScanIdForFindings])
 
-  const loadReposFromDb = async () => {
+  const loadReposFromDb = async (page = (activeTab === 'reviewer' ? reviewerPage : reposPage)) => {
     try {
       setIsPageLoading(true)
       const token = localStorage.getItem('token')
       if (!token) return
-      const response = await fetch(`${import.meta.env.VITE_APP_INTEGRATION_URL}/api/v1/repos`, {
+      const response = await fetch(`${import.meta.env.VITE_APP_INTEGRATION_URL}/api/v1/repos?page=${page}&limit=9`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -203,6 +165,9 @@ const Dashboard = () => {
         const data = await response.json()
         if (data.success) {
           setRepos(data.data || [])
+          if (data.pagination) {
+            setTotalRepos(data.pagination.total || 0)
+          }
         }
       }
     } catch (error) {
@@ -336,7 +301,8 @@ const Dashboard = () => {
       if (response.ok) {
         const resData = await response.json()
         if (resData.success) {
-          setRepos(resData.data || [])
+          setReposPage(1)
+          loadReposFromDb(1)
           toast.success('Repositories synchronized successfully!')
 
           if (tempInstallationId) {
@@ -642,17 +608,6 @@ const Dashboard = () => {
     }
   }
 
-  const calculateSecurityScore = (findingsList: Finding[]) => {
-    if (findingsList.length === 0) return { score: 'A+', color: 'text-emerald-400' }
-    const criticals = findingsList.filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH').length
-    const mediums = findingsList.filter(f => f.severity === 'MEDIUM').length
-
-    if (criticals === 0 && mediums === 0) return { score: 'A', color: 'text-emerald-400' }
-    if (criticals === 0 && mediums > 0) return { score: 'B', color: 'text-yellow-400' }
-    if (criticals === 1) return { score: 'C', color: 'text-orange-400' }
-    if (criticals > 1 && criticals < 5) return { score: 'D', color: 'text-red-400' }
-    return { score: 'F', color: 'text-red-500 font-extrabold' }
-  }
 
   const handleLogout = () => {
     clearUser()
@@ -754,677 +709,89 @@ const Dashboard = () => {
           </div>
         ) : activeScanIdForFindings ? (
           /* ─── Center Findings Page View (Keeping sidebar visible) ─── */
-          <div className="space-y-8 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setActiveScanIdForFindings(null)}
-                className="inline-flex items-center gap-2 text-neutral-400 hover:text-white transition-colors font-semibold text-sm cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to List
-              </button>
-
-              {findings.some((f) => f.status === 'RESOLVED') && (
-                <div>
-                  {openedPrUrl ? (
-                    <a
-                      href={openedPrUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 font-bold text-xs px-4 py-2.5 rounded-lg hover:bg-emerald-950/40 transition-all"
-                    >
-                      🎉 View Pull Request ↗
-                    </a>
-                  ) : (
-                    <button
-                      onClick={openPR}
-                      disabled={isPrOpening}
-                      className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2.5 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                    >
-                      <GitPullRequest className="w-3.5 h-3.5" />
-                      {isPrOpening ? 'Creating PR...' : '🚀 Staged fixes ready: Open Pull Request'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {isFindingsLoading ? (
-              <div className="space-y-6 animate-pulse">
-                <div className="h-10 bg-neutral-900 rounded-lg w-1/3" />
-                <div className="h-64 bg-neutral-900 border border-white/[0.04] rounded-xl" />
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Header details inside modal view */}
-                <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1">
-                    <h1 className="text-xl font-semibold tracking-tight text-white flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-neutral-400" />
-                      Findings: {repoName || 'Evaluating codebase...'}
-                    </h1>
-                    <p className="text-xs text-neutral-400">
-                      Scan UUID: <code className="font-mono text-neutral-300 bg-white/5 px-2 py-0.5 rounded">{activeScanIdForFindings}</code>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Findings GitHub-Section List */}
-                {findings.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto opacity-80" />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">No Vulnerabilities Detected</h3>
-                      <p className="text-neutral-500 text-xs mt-1">Excellent! Your repository code matches Aegis security standards.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-                    {/* Header bar / Selection bar */}
-                    <div className="bg-white/[0.02] border-b border-white/[0.08] p-4 flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-2">
-                        {findings.some((f) => f.status !== 'RESOLVED') && (
-                          <input
-                            type="checkbox"
-                            checked={
-                              findings.filter((f) => f.status !== 'RESOLVED').length > 0 &&
-                              findings
-                                .filter((f) => f.status !== 'RESOLVED')
-                                .every((f) => selectedFindingIds.includes(f.id))
-                            }
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                const unresolvedIds = findings
-                                  .filter((f) => f.status !== 'RESOLVED')
-                                  .map((f) => f.id)
-                                setSelectedFindingIds(unresolvedIds)
-                              } else {
-                                setSelectedFindingIds([])
-                              }
-                            }}
-                            className="w-4 h-4 cursor-pointer accent-white"
-                          />
-                        )}
-                        <span className="font-semibold text-neutral-400">
-                          {selectedFindingIds.length > 0 
-                            ? `${selectedFindingIds.length} selected` 
-                            : `${findings.filter(f => f.status !== 'RESOLVED').length} open findings`}
-                        </span>
-                      </div>
-                      {selectedFindingIds.length > 0 && (
-                        <button
-                          onClick={handleFixSelected}
-                          disabled={fixingAll}
-                          className="inline-flex items-center gap-1.5 bg-white text-black hover:bg-neutral-200 font-semibold px-3 py-1.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer text-xs"
-                        >
-                          {fixingAll ? 'Fixing Selected...' : `Auto Fix Selected (${selectedFindingIds.length})`}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Findings list rows */}
-                    <div className="divide-y divide-white/[0.06]">
-                      {findings.slice((findingsPage - 1) * FINDINGS_PER_PAGE, findingsPage * FINDINGS_PER_PAGE).map((finding) => (
-                        <div
-                          key={finding.id}
-                          className="p-5 space-y-4 hover:bg-white/[0.01] transition-colors"
-                        >
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex items-center gap-2.5 flex-wrap">
-                                {finding.status !== 'RESOLVED' && (
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedFindingIds.includes(finding.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedFindingIds((prev) => [...prev, finding.id])
-                                      } else {
-                                        setSelectedFindingIds((prev) =>
-                                          prev.filter((id) => id !== finding.id)
-                                        )
-                                      }
-                                    }}
-                                    className="w-4 h-4 cursor-pointer accent-white"
-                                  />
-                                )}
-                                <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${
-                                  finding.severity === 'CRITICAL' || finding.severity === 'HIGH'
-                                    ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                    : finding.severity === 'MEDIUM'
-                                      ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
-                                      : 'bg-white/[0.05] border border-white/[0.08] text-neutral-300'
-                                  }`}>
-                                  {finding.severity}
-                                </span>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                                  {finding.tool}
-                                </span>
-                              </div>
-                              <h3 className="text-base font-semibold text-white tracking-tight pt-1">
-                                {finding.title}
-                              </h3>
-                              <code className="text-xs font-mono text-neutral-500 block truncate max-w-xl">
-                                File: {finding.filePath}:{finding.line || 1}
-                              </code>
-                            </div>
-
-                            <div className="shrink-0 pt-1">
-                              {finding.status === 'RESOLVED' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Patched
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleFixFinding(finding.id)}
-                                  disabled={fixingFindingId === finding.id}
-                                  className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                                >
-                                  {fixingFindingId === finding.id ? 'Fixing...' : 'Auto Fix'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <p className="text-neutral-400 text-xs md:text-sm leading-relaxed border-t border-white/[0.04] pt-3">
-                            {finding.description}
-                          </p>
-
-                          {/* Collapsible AI fix panel */}
-                          {finding.status === 'RESOLVED' && fixResults[finding.id] && (
-                            <div className="border border-white/[0.06] rounded-xl overflow-hidden mt-3 bg-neutral-900/40 text-xs animate-in slide-in-from-top duration-200">
-                              <button
-                                onClick={() => {
-                                  setExpandedFixIds((prev) => ({
-                                    ...prev,
-                                    [finding.id]: !prev[finding.id]
-                                  }))
-                                }}
-                                className="w-full bg-white/[0.01] border-b border-white/[0.06] px-4 py-2 flex items-center justify-between text-neutral-400 hover:text-white transition-colors cursor-pointer text-left font-semibold"
-                              >
-                                <span className="flex items-center gap-1.5 text-emerald-400">
-                                  <Terminal className="w-3.5 h-3.5" /> AI Remediation Applied
-                                </span>
-                                {expandedFixIds[finding.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              </button>
-
-                              {expandedFixIds[finding.id] && (
-                                <div className="p-4 space-y-3">
-                                  <div>
-                                    <p className="text-neutral-500 font-semibold mb-1 text-[10px] uppercase tracking-wider">AI Explanation</p>
-                                    <p className="text-neutral-300 leading-relaxed font-sans">{fixResults[finding.id].explanation}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-neutral-500 font-semibold mb-2 text-[10px] uppercase tracking-wider">Patched Code Changes</p>
-                                    <pre className="p-4 rounded-xl border border-white/[0.08] bg-black font-mono text-xs overflow-x-auto leading-relaxed select-text max-h-[500px] w-full">
-                                      <code className="block space-y-0.5 w-full">
-                                        {fixResults[finding.id].code.split('\n').map((line, idx) => {
-                                          let className = "text-neutral-400 px-2 block w-full"
-                                          if (line.startsWith('+')) {
-                                            className = "text-emerald-400 bg-emerald-500/5 border-l-2 border-emerald-500 px-2 block w-full font-medium"
-                                          } else if (line.startsWith('-')) {
-                                            className = "text-rose-400 bg-rose-500/5 border-l-2 border-rose-500 px-2 block w-full font-medium"
-                                          } else if (line.startsWith('@@')) {
-                                            className = "text-neutral-500 font-bold block w-full opacity-60 px-2 border-b border-white/[0.04] pb-1 mb-1 mt-2 text-[10px]"
-                                          } else if (line.trim()) {
-                                            className = "text-neutral-300 px-2 block w-full opacity-80"
-                                          } else {
-                                            className = "h-4 block w-full"
-                                          }
-                                          return (
-                                            <span key={idx} className={className}>
-                                              {line}
-                                            </span>
-                                          )
-                                        })}
-                                      </code>
-                                    </pre>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Footer / Pagination bar */}
-                    <div className="bg-white/[0.02] border-t border-white/[0.08] p-4 flex justify-end">
-                      <Pagination
-                        currentPage={findingsPage}
-                        totalItems={findings.length}
-                        itemsPerPage={FINDINGS_PER_PAGE}
-                        onPageChange={setFindingsPage}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <FindingsExplorer
+            findings={findings}
+            findingsPage={findingsPage}
+            FINDINGS_PER_PAGE={FINDINGS_PER_PAGE}
+            setFindingsPage={setFindingsPage}
+            selectedFindingIds={selectedFindingIds}
+            setSelectedFindingIds={setSelectedFindingIds}
+            fixingAll={fixingAll}
+            handleFixSelected={handleFixSelected}
+            fixingFindingId={fixingFindingId}
+            handleFixFinding={handleFixFinding}
+            fixResults={fixResults}
+            expandedFixIds={expandedFixIds}
+            setExpandedFixIds={setExpandedFixIds}
+            repoName={repoName}
+            activeScanIdForFindings={activeScanIdForFindings}
+            isFindingsLoading={isFindingsLoading}
+            openPR={openPR}
+            isPrOpening={isPrOpening}
+            openedPrUrl={openedPrUrl}
+            handleInspectFixes={handleInspectFixes}
+            setActiveScanIdForFindings={setActiveScanIdForFindings}
+          />
         ) : (
           <>
             {/* TAB 1: SECURITY SCAN & FIX (Feature 1 - Repos list) */}
             {activeTab === 'repositories' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">AI Security Scan & Fix</h1>
-                    <p className="text-neutral-400 text-sm">Run sandbox vulnerability evaluations, generate secure patches, and stage PRs.</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSync}
-                      disabled={isSyncing}
-                      className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                      {isSyncing ? 'Syncing...' : 'Sync Repositories'}
-                    </button>
-                    {user?.installationID && (
-                      <a
-                        href={`https://github.com/settings/installations/${user.installationID}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all"
-                      >
-                        Configure Repositories
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {repos.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
-                    <Database className="w-8 h-8 text-neutral-600 mx-auto animate-pulse" />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">No Repositories Synced</h3>
-                      <p className="text-neutral-500 text-xs mt-1">Please configure the GitHub App and click sync repositories to import them.</p>
-                    </div>
-                    <button
-                      onClick={handleSync}
-                      className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
-                    >
-                      Sync Repositories
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                          <th className="p-4 pl-6">Repository Name</th>
-                          <th className="p-4">GitHub URL</th>
-                          <th className="p-4 text-center">Security Scan Status</th>
-                          <th className="p-4 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm divide-y divide-white/[0.04]">
-                        {repos.slice((reposPage - 1) * ITEMS_PER_PAGE, reposPage * ITEMS_PER_PAGE).map((repo) => {
-                          const scanInfo = scanStatus[repo.id]
-                          return (
-                            <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
-                              <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
-                              <td className="p-4">
-                                <a
-                                  href={repo.repo_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
-                                >
-                                  Open GitHub
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                              </td>
-                              <td className="p-4 text-center">
-                                {scanInfo ? (
-                                  <div className="flex items-center justify-center gap-2">
-                                    <span
-                                      className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanInfo.status === 'SUCCESS'
-                                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                          : scanInfo.status === 'FAILED'
-                                            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                            : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
-                                        }`}
-                                    >
-                                      Status: {scanInfo.status}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-neutral-500 font-medium">Not Scanned Yet</span>
-                                )}
-                              </td>
-                              <td className="p-4 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button
-                                    onClick={() => triggerScan(repo.id)}
-                                    disabled={scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS'}
-                                    className="inline-flex items-center gap-1 bg-white text-black font-bold text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer disabled:opacity-50"
-                                  >
-                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                    {scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS' ? 'Scanning...' : 'Scan Now'}
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      currentPage={reposPage}
-                      totalItems={repos.length}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setReposPage}
-                    />
-                  </div>
-                )}
-              </div>
+              <RepositoriesTab
+                repos={repos}
+                reposPage={reposPage}
+                totalRepos={totalRepos}
+                setReposPage={setReposPage}
+                scanStatus={scanStatus}
+                isSyncing={isSyncing}
+                handleSync={handleSync}
+                triggerScan={triggerScan}
+                user={user}
+              />
             )}
 
             {/* TAB 2: SECURITY SCANS HISTORY */}
             {activeTab === 'scans' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Security Scans History</h1>
-                  <p className="text-neutral-400 text-sm">Review historical security evaluation reports for user repositories.</p>
-                </div>
-
-                {isScansLoading ? (
-                  <div className="space-y-4 animate-pulse">
-                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
-                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
-                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
-                  </div>
-                ) : scans.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl bg-neutral-950 space-y-4">
-                    <Shield className="w-8 h-8 text-neutral-600 mx-auto" />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">No Scans Recorded</h3>
-                      <p className="text-neutral-500 text-xs mt-1">Start a security scan on any repository to begin evaluation.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                          <th className="p-4 pl-6">Scan ID</th>
-                          <th className="p-4">Repository Name</th>
-                          <th className="p-4 text-center">Status</th>
-                          <th className="p-4 text-center">Findings Detected</th>
-                          <th className="p-4 text-center">Date Created</th>
-                          <th className="p-4 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm divide-y divide-white/[0.04]">
-                        {scans.map((scanItem) => (
-                          <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
-                            <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
-                            <td className="p-4 text-center">
-                              <span
-                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanItem.status === 'SUCCESS'
-                                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                    : scanItem.status === 'FAILED'
-                                      ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                      : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
-                                  }`}
-                              >
-                                {scanItem.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-center font-bold text-neutral-200">
-                              {scanItem.findings?.length || 0} issues
-                            </td>
-                            <td className="p-4 text-center text-xs text-neutral-400">
-                              {new Date(scanItem.createdAt).toLocaleString()}
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => setActiveScanIdForFindings(scanItem.id)}
-                                className="inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-                              >
-                                📋 View Findings
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      currentPage={scansPage}
-                      totalItems={totalScans}
-                      itemsPerPage={SCANS_PER_PAGE}
-                      onPageChange={setScansPage}
-                    />
-                  </div>
-                )}
-              </div>
+              <ScansHistoryTab
+                scans={scans}
+                scansPage={scansPage}
+                totalScans={totalScans}
+                setScansPage={setScansPage}
+                isScansLoading={isScansLoading}
+                setActiveScanIdForFindings={setActiveScanIdForFindings}
+                SCANS_PER_PAGE={SCANS_PER_PAGE}
+              />
             )}
 
             {/* TAB 3: SCAN FIXES */}
             {activeTab === 'fixes' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Scan Fixes Console</h1>
-                  <p className="text-neutral-400 text-sm">Review scans containing resolved vulnerabilities and secure code patches.</p>
-                </div>
-
-                {isScansLoading ? (
-                  <div className="space-y-4 animate-pulse">
-                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
-                    <div className="h-12 bg-neutral-900 rounded-lg w-full" />
-                  </div>
-                ) : fixesScans.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl bg-neutral-950 space-y-4">
-                    <CheckCircle2 className="w-8 h-8 text-neutral-600 mx-auto" />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">No Fixed Scans Yet</h3>
-                      <p className="text-neutral-500 text-xs mt-1">Select findings from your scans and apply AI fixes to view them here.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                          <th className="p-4 pl-6">Scan ID</th>
-                          <th className="p-4">Repository Name</th>
-                          <th className="p-4 text-center">Patched Vulnerabilities</th>
-                          <th className="p-4 text-center">Date Remedied</th>
-                          <th className="p-4 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm divide-y divide-white/[0.04]">
-                        {fixesScans.map((scanItem) => {
-                          const resolvedCount = scanItem.findings.filter((f: any) => f.status === 'RESOLVED').length
-                          return (
-                            <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
-                              <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
-                              <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
-                              <td className="p-4 text-center text-emerald-400 font-bold">
-                                ✓ {resolvedCount} resolved
-                              </td>
-                              <td className="p-4 text-center text-xs text-neutral-400">
-                                {new Date(scanItem.updatedAt).toLocaleString()}
-                              </td>
-                              <td className="p-4 text-center">
-                                <button
-                                  onClick={() => handleInspectFixes(scanItem.id)}
-                                  className="inline-flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-emerald-950/40 transition-all cursor-pointer"
-                                >
-                                  Inspect Fixes
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      currentPage={fixesPage}
-                      totalItems={totalFixes}
-                      itemsPerPage={SCANS_PER_PAGE}
-                      onPageChange={setFixesPage}
-                    />
-                  </div>
-                )}
-              </div>
+              <FixesConsoleTab
+                fixesScans={fixesScans}
+                fixesPage={fixesPage}
+                totalFixes={totalFixes}
+                setFixesPage={setFixesPage}
+                isScansLoading={isScansLoading}
+                handleInspectFixes={handleInspectFixes}
+                SCANS_PER_PAGE={SCANS_PER_PAGE}
+              />
             )}
 
             {/* TAB 4: AUTO PR REVIEWER (Feature 2) */}
             {activeTab === 'reviewer' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">AI Pull Request Reviewer</h1>
-                    <p className="text-neutral-400 text-sm">Toggle automated, continuous AI-driven review comments on your GitHub Pull Requests.</p>
-                  </div>
-                  <button
-                    onClick={handleSync}
-                    disabled={isSyncing}
-                    className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? 'Syncing...' : 'Sync Repositories'}
-                  </button>
-                </div>
-
-                {repos.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/[0.08] rounded-xl space-y-4 bg-neutral-950">
-                    <Database className="w-8 h-8 text-neutral-600 mx-auto animate-pulse" />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">No Repositories Synced</h3>
-                      <p className="text-neutral-500 text-xs mt-1">Please configure the GitHub App and click sync repositories to import them.</p>
-                    </div>
-                    <button
-                      onClick={handleSync}
-                      className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
-                    >
-                      Sync Repositories
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                          <th className="p-4 pl-6">Repository Name</th>
-                          <th className="p-4">GitHub URL</th>
-                          <th className="p-4 text-center">Auto PR Reviewer Status</th>
-                          <th className="p-4 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm divide-y divide-white/[0.04]">
-                        {repos.slice((reviewerPage - 1) * ITEMS_PER_PAGE, reviewerPage * ITEMS_PER_PAGE).map((repo) => (
-                          <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
-                            <td className="p-4">
-                              <a
-                                href={repo.repo_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
-                              >
-                                Open GitHub
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                            </td>
-                            <td className="p-4 text-center font-semibold">
-                              <span
-                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${repo.prReviewer
-                                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                    : 'bg-white/[0.05] border border-white/[0.08] text-neutral-400'
-                                  }`}
-                              >
-                                {repo.prReviewer ? 'Active' : 'Disabled'}
-                              </span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleTogglePrReviewer(repo.id)}
-                                disabled={!!togglingPrReviewer[repo.id]}
-                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${repo.prReviewer
-                                    ? 'bg-neutral-900 border border-white/[0.06] text-neutral-400 hover:text-white hover:bg-neutral-800'
-                                    : 'bg-white text-black hover:bg-neutral-200'
-                                  }`}
-                              >
-                                {togglingPrReviewer[repo.id] ? 'Updating...' : repo.prReviewer ? 'Disable Reviewer' : 'Enable Reviewer'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      currentPage={reviewerPage}
-                      totalItems={repos.length}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setReviewerPage}
-                    />
-                  </div>
-                )}
-
-                <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-6 space-y-4">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <GitPullRequest className="w-5 h-5 text-emerald-400" /> Webhook Integration Details
-                  </h2>
-                  <p className="text-neutral-400 text-sm leading-relaxed">
-                    Aegis listens to GitHub webhook triggers. When a contributor creates a Pull Request, re-opens one, or pushes new commits:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 text-sm text-neutral-400 pl-4">
-                    <li>The webhook triggers an automated analysis on the file diffs.</li>
-                    <li>Secure bot evaluates code security, quality standards, and potential performance bugs.</li>
-                    <li>The bot comments inline suggestions directly onto target lines on GitHub, simplifying PR reviews.</li>
-                  </ul>
-                </div>
-              </div>
+              <PrReviewerTab
+                repos={repos}
+                reviewerPage={reviewerPage}
+                totalRepos={totalRepos}
+                setReviewerPage={setReviewerPage}
+                isSyncing={isSyncing}
+                handleSync={handleSync}
+                handleTogglePrReviewer={handleTogglePrReviewer}
+                togglingPrReviewer={togglingPrReviewer}
+              />
             )}
 
             {/* TAB 5: CONFIGURATIONS */}
             {activeTab === 'overview' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Account Configurations</h1>
-                  <p className="text-neutral-400 text-sm">Review your operator details and authorized credentials.</p>
-                </div>
-
-                <div className="border border-white/[0.08] rounded-xl bg-neutral-950 p-8 max-w-2xl">
-                  <div className="divide-y divide-white/[0.06] text-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
-                      <span className="text-neutral-400 font-medium">Aegis Operator UUID</span>
-                      <code className="text-neutral-300 font-mono text-xs select-all bg-white/[0.04] px-2.5 py-1 rounded border border-white/[0.06] self-start sm:self-auto">
-                        {user?.id}
-                      </code>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
-                      <span className="text-neutral-400 font-medium">Email Address</span>
-                      <span className="text-neutral-200 font-semibold">{user?.email || 'Not shared'}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-4">
-                      <span className="text-neutral-400 font-medium">GitHub App Installation</span>
-                      {user?.installationID && user.installationID !== 'null' ? (
-                        <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg animate-in fade-in duration-300">
-                          Active (ID: {user.installationID})
-                        </span>
-                      ) : (
-                        <a
-                          href="https://github.com/apps/aegisbykeshav"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-cyan-400 hover:underline text-xs font-semibold"
-                        >
-                          Setup Aegis App
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ConfigurationsTab user={user} />
             )}
           </>
         )}

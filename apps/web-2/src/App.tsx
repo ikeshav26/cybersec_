@@ -42,7 +42,7 @@ const App = () => {
             const data = await response.json()
             if (data.user) {
               setUser(data.user)
-              if (location.pathname === '/auth' || location.pathname === '/' || hasParamToken) {
+              if (location.pathname === '/auth' || hasParamToken) {
                 navigate('/dashboard')
               }
               if (hasParamToken) {

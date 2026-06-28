@@ -179,6 +179,10 @@ export const getUserRepositories = async (req: Request, res: Response) => {
       })
     }
 
+    const page = parseInt(req.query.page as string, 10) || 1
+    const limit = parseInt(req.query.limit as string, 10) || 9
+    const skip = (page - 1) * limit
+
     const installation = await prisma.installation.findFirst({
       where: { userId: userId },
     })
@@ -188,18 +192,36 @@ export const getUserRepositories = async (req: Request, res: Response) => {
         success: true,
         message: 'No installations found',
         data: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          pages: 0
+        }
       })
     }
+
+    const total = await prisma.repository.count({
+      where: { installationId: installation.id },
+    })
 
     const repos = await prisma.repository.findMany({
       where: { installationId: installation.id },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     })
 
     return res.status(200).json({
       success: true,
       message: 'Repositories fetched successfully',
       data: repos,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
     })
   } catch (err) {
     console.error(err)
