@@ -21,13 +21,19 @@ app.use(cookieParser())
 app.use(helmet())
 
 app.get('/api/health', (req: Request, res: Response) => {
-  return res.status(200).json({ message: 'API Gateway is healthy' })
+  return res.status(200).json({ message: 'API Gateway is healthy /api/health route' })
+})
+app.get('/api', (req: Request, res: Response) => {
+  return res.status(200).json({ message: 'API Gateway is healthy /api route' })
+})
+app.get('/', (req: Request, res: Response) => {
+  return res.status(200).json({ message: 'API Gateway is healthy / route' })
 })
 app.use('/api/auth', authProxy)
-app.use('/api/app-integration', Authenticate, appIntegrationProxy)
-app.use('/api/secure-bot', Authenticate, secureBotProxy)
-app.use('/api/secure-bot/scan', Authenticate, scanLimiter, secureBotProxy)
-app.use('/api/secure-bot/fix', Authenticate, fixLimiter, secureBotProxy)
+app.use('/api/app-integration', appIntegrationProxy)
+app.use('/api/secure-bot', secureBotProxy)
+app.use('/api/secure-bot/scan', scanLimiter, secureBotProxy)
+app.use('/api/secure-bot/fix', fixLimiter, secureBotProxy)
 
 app.use(errorHandler)
 export default app

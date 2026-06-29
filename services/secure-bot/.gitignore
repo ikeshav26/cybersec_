@@ -8,3 +8,5 @@ fixes
 /src/generated/prisma
 
 /generated/prisma
+
+.env.prod
