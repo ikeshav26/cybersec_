@@ -2,6 +2,10 @@
   hosts: web
   become: true
 
+  vars:
+    domain_name: api.ikeshav.in
+    certbot_email: ikeshav26@gmail.com
+
   tasks:
     - name: Update apt cache
       apt:
@@ -90,6 +94,23 @@
         src: ../services/secure-bot/.env.prod
         dest: /opt/cybersuite/services/secure-bot/.env.prod
         mode: '0600'
+
+    - name: Check if SSL certificate already exists
+      stat:
+        path: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+      register: ssl_cert
+
+    - name: Stop Nginx container if running (to free port 80 for Certbot)
+      shell: docker stop nginx_container
+      failed_when: false
+      when: not ssl_cert.stat.exists
+
+    - name: Run Certbot standalone to generate SSL certificate
+      command: >
+        certbot certonly --standalone -d {{ domain_name }}
+        --non-interactive --agree-tos
+        -m {{ certbot_email }}
+      when: not ssl_cert.stat.exists
 
     - name: Stop existing Docker Compose services (if any are running)
       shell: docker compose down
