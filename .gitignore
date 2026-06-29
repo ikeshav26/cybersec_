@@ -38,3 +38,11 @@ yarn-error.log*
 *.pem
 
 data/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+crash.log

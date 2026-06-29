@@ -7,6 +7,7 @@ RUN corepack enable
 
 COPY . .
 RUN pnpm --filter auth-service install --frozen-lockfile
+RUN pnpm --filter auth-service exec prisma generate
 RUN pnpm turbo run build --filter=auth-service
 
 

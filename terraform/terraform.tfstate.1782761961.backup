@@ -1,0 +1,35 @@
+{
+  "version": 4,
+  "terraform_version": "1.15.6",
+  "serial": 13,
+  "lineage": "5d3acc1f-e5be-8a0d-f859-17d000ec0915",
+  "outputs": {},
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "digitalocean_vpc",
+      "name": "custom_vpc",
+      "provider": "provider[\"registry.terraform.io/digitalocean/digitalocean\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "created_at": "2026-06-29 19:28:03 +0000 UTC",
+            "default": true,
+            "description": "",
+            "id": "b36139a3-86db-4cfa-89fd-9bad766833ed",
+            "ip_range": "10.108.0.0/20",
+            "name": "cybersuite-vpc",
+            "region": "nyc3",
+            "timeouts": null,
+            "urn": "do:vpc:b36139a3-86db-4cfa-89fd-9bad766833ed"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
