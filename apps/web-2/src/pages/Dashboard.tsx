@@ -561,6 +561,11 @@ const Dashboard = () => {
             }
           } : f))
         )
+
+        // Automatically fetch live status of scan findings
+        if (activeScanIdForFindings) {
+          fetchScanFindings(activeScanIdForFindings)
+        }
       } else {
         toast.error('Failed to apply automated patch')
       }
@@ -634,6 +639,11 @@ const Dashboard = () => {
         setFixResults(newFixResults)
         setExpandedFixIds(newExpandedFixIds)
         setSelectedFindingIds([])
+
+        // Automatically fetch live status of scan findings
+        if (activeScanIdForFindings) {
+          fetchScanFindings(activeScanIdForFindings)
+        }
       } else {
         toast.error('Failed to apply bulk fixes')
       }

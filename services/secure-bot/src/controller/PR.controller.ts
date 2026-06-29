@@ -164,14 +164,14 @@ export const openPullRequestForFix = async (req: Request, res: Response) => {
         console.log('No file changes detected compared to main branch. Skipping PR.')
         try {
           await fs.promises.rm(clonePath, { recursive: true })
-        } catch (e) {}
+        } catch (e) { }
         return res.status(400).json({
           message: 'No file changes detected compared to the main branch. Pull Request was not created.'
         })
       }
 
       // Commit changes at once (Single commit)
-      await asyncExec(`git commit -m "shield: resolve vulnerabilities in scan #${scan.id.substring(0, 8)}"`, { cwd: clonePath })
+      await asyncExec(`git commit -m "🛡️ fix: resolve vulnerabilities in scan #${scan.id.substring(0, 8)}"`, { cwd: clonePath })
 
       // Retrieve authentication token to push
       const auth: any = await octokit.auth({ type: 'installation' })
@@ -187,7 +187,7 @@ export const openPullRequestForFix = async (req: Request, res: Response) => {
       console.error('Git execution failed:', gitErr)
       try {
         await fs.promises.rm(clonePath, { recursive: true })
-      } catch (e) {}
+      } catch (e) { }
 
       const errMsg = gitErr.message || String(gitErr)
       if (errMsg.includes('.github/workflows') || errMsg.includes('workflow')) {

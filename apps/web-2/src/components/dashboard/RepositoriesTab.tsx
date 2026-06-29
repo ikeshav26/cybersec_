@@ -1,4 +1,5 @@
-import { RefreshCw, ExternalLink, Database, Play } from 'lucide-react'
+import { useState } from 'react'
+import { RefreshCw, ExternalLink, Database, Play, Info, Shield } from 'lucide-react'
 import Pagination from '../ui/Pagination'
 
 interface RepositoriesTabProps {
@@ -24,6 +25,8 @@ const RepositoriesTab = ({
   triggerScan,
   user
 }: RepositoriesTabProps) => {
+  const [isNoteOpen, setIsNoteOpen] = useState(false)
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -32,6 +35,13 @@ const RepositoriesTab = ({
           <p className="text-neutral-400 text-sm">Run sandbox vulnerability evaluations, generate secure patches, and stage PRs.</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsNoteOpen(true)}
+            className="inline-flex items-center gap-1.5 border border-white/10 hover:border-white/20 bg-white/[0.03] text-neutral-400 hover:text-white font-bold text-xs px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <Info className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            Access Policy
+          </button>
           {user?.installationID ? (
             <>
               <button
@@ -165,6 +175,68 @@ const RepositoriesTab = ({
             itemsPerPage={9}
             onPageChange={setReposPage}
           />
+        </div>
+      )}
+
+      {/* Side Drawer Modal */}
+      {isNoteOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/65 backdrop-blur-sm transition-opacity duration-300 cursor-pointer"
+            onClick={() => setIsNoteOpen(false)}
+          />
+          
+          {/* Drawer Panel */}
+          <div className="absolute inset-y-0 right-0 max-w-md w-full bg-neutral-950 border-l border-white/[0.08] shadow-2xl p-6 flex flex-col justify-between transform transition-all duration-300 ease-in-out">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-lg font-bold text-white tracking-tight">Security & Access Note</h3>
+                </div>
+                <button 
+                  onClick={() => setIsNoteOpen(false)}
+                  className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-base font-medium px-2 py-1 hover:bg-white/5 rounded-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-4 text-sm text-neutral-300 leading-relaxed">
+                <p>
+                  Aegis implements strict data integration policies with GitHub authorizations.
+                </p>
+                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-200 space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-rose-400">Authorization Removal Policy</h4>
+                  <p className="text-xs font-medium">
+                    If you remove any of repo authorization, our system will automatically remove the scan history and findings history for that repo.
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200 space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-400">Staged Changes Expiration</h4>
+                  <p className="text-xs font-medium">
+                    Make sure to open a Pull Request for staged fixes within 30 minutes of generation. Staged changes are automatically cleaned up from the server after 30 minutes, after which you will need to scan and fix them again.
+                  </p>
+                </div>
+                <p>
+                  These actions are automated to ensure your compliance, security standards, and privacy boundaries. Once authorization is revoked or staged files expire, they cannot be recovered.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-white/[0.08] pt-4 flex justify-end">
+              <button
+                onClick={() => setIsNoteOpen(false)}
+                className="bg-white text-black hover:bg-neutral-200 font-bold text-xs px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer"
+              >
+                Acknowledge
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
