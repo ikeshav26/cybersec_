@@ -67,6 +67,9 @@ services:
       dockerfile: services/secure-bot/dockerfile
     env_file:
       - services/secure-bot/.env.prod
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /app/services/secure-bot/scans:/app/services/secure-bot/scans
     image: secure-bot:latest
     container_name: secure_bot_container
     depends_on:
