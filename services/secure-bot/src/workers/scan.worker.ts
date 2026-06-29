@@ -12,7 +12,7 @@ export const worker = new Worker(
   },
   {
     connection: redisConnectionOptions,
-    concurrency: 3,
+    concurrency: 1,
   },
 )
 
