@@ -112,13 +112,26 @@
         -m {{ certbot_email }}
       when: not ssl_cert.stat.exists
 
-    - name: Stop existing Docker Compose services (if any are running)
-      shell: docker compose down
-      args:
-        chdir: /opt/cybersuite
-      failed_when: false 
-
     - name: Build and start Docker Compose services
       shell: docker compose up -d --build
+      args:
+        chdir: /opt/cybersuite
+
+    - name: Run Prisma migrations for auth-service
+      shell: docker compose exec -T auth-service pnpm --filter auth-service exec prisma migrate deploy
+      args:
+        chdir: /opt/cybersuite
+      register: migration_result
+      until: migration_result.rc == 0
+      retries: 10
+      delay: 3
+
+    - name: Run Prisma migrations for app-integration-service
+      shell: docker compose exec -T app-integration-service pnpm --filter app-integration-service exec prisma migrate deploy
+      args:
+        chdir: /opt/cybersuite
+
+    - name: Run Prisma migrations for secure-bot
+      shell: docker compose exec -T secure-bot pnpm --filter secure-bot exec prisma migrate deploy
       args:
         chdir: /opt/cybersuite
