@@ -118,7 +118,7 @@
         chdir: /opt/cybersuite
 
     - name: Run Prisma migrations for auth-service
-      shell: docker compose exec -T auth-service pnpm --filter auth-service exec prisma migrate deploy
+      shell: docker compose exec -T auth-service npx prisma migrate deploy
       args:
         chdir: /opt/cybersuite
       register: migration_result
@@ -127,11 +127,11 @@
       delay: 3
 
     - name: Run Prisma migrations for app-integration-service
-      shell: docker compose exec -T app-integration-service pnpm --filter app-integration-service exec prisma migrate deploy
+      shell: docker compose exec -T app-integration-service npx prisma migrate deploy
       args:
         chdir: /opt/cybersuite
 
     - name: Run Prisma migrations for secure-bot
-      shell: docker compose exec -T secure-bot pnpm --filter secure-bot exec prisma migrate deploy
+      shell: docker compose exec -T secure-bot npx prisma migrate deploy
       args:
         chdir: /opt/cybersuite

@@ -14,6 +14,9 @@ RUN pnpm turbo run build --filter=secure-bot
 #production-stage
 FROM node:22-alpine as prodcution
 
+# Install Git to support repository cloning during security scans
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 COPY --from=builder /app/services/secure-bot ./services/secure-bot
