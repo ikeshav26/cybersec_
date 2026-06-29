@@ -21,6 +21,24 @@ const App = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
+    const errorParam = params.get('error')
+    const messageParam = params.get('message')
+
+    if (errorParam === 'oauth_failed') {
+      toast.error(messageParam ? messageParam.replace(/"/g, '') : 'Authentication failed')
+      params.delete('error')
+      params.delete('message')
+      const newSearch = params.toString()
+      navigate(
+        {
+          pathname: '/',
+          search: newSearch ? `?${newSearch}` : ''
+        },
+        { replace: true }
+      )
+      return
+    }
+
     let token = params.get('token')
     const hasParamToken = !!token
 
