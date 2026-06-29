@@ -24,7 +24,62 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/dockerfile
+    ports:
+      - 5003:5003
+    env_file:
+      - services/api-gateway/.env
+    image: api-gateway:latest
+    container_name: api_gateway_container
+    depends_on:
+      - redis
+      - db
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/dockerfile
+    ports:
+      - 5000:5000
+    env_file:
+      - services/auth-service/.env
+    image: auth-service:latest
+    container_name: auth_service_container
+    depends_on:
+      - redis
+      - db
+
+  app-integration-service:
+    build:
+      context: .
+      dockerfile: services/app-integration-service/dockerfile
+    ports:
+      - 5001:5001
+    env_file:
+      - services/app-integration-service/.env
+    image: app-integration-service:latest
+    container_name: app_integration_service_container
+    depends_on:
+      - redis
+      - db
+
+  secure-bot:
+    build:
+      context: .
+      dockerfile: services/secure-bot/dockerfile
+    ports:
+      - 5002:5002
+    env_file:
+      - services/secure-bot/.env
+    image: secure-bot:latest
+    container_name: secure_bot_container
+    depends_on:
+      - redis
+      - db
 
   gitleaks:
     image: ghcr.io/gitleaks/gitleaks:latest
@@ -40,7 +95,6 @@ services:
     image: aquasec/trivy:latest
     volumes:
       - shared-scans:/scans
-
 
 volumes:
   shared-scans:

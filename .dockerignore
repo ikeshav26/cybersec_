@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.next
+dist
+coverage
+turbo
+.vscode
+.env*
+Dockerfile*
+docker-compose*
+README.md
+pnpm-debug.log
+data/
