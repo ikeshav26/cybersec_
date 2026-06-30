@@ -21,7 +21,7 @@ app.use(cookieParser())
 app.use(helmet())
 
 app.get('/api/health', (req: Request, res: Response) => {
-  return res.status(200).json({ message: 'API Gateway is healthy /api/health route' })
+  return res.status(200).json({ message: 'API Gateway is healthy ' })
 })
 app.get('/api', (req: Request, res: Response) => {
   return res.status(200).json({ message: 'API Gateway is healthy /api route' })

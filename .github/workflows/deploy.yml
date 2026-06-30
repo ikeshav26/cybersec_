@@ -1,0 +1,34 @@
+name: deploy by updating ansible playbook
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install ansible -y
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.DOTENV }}" > .env
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook -i ansible/inventory ansible/site.yml \
+          --extra-vars "domain_name=${{ secrets.DOMAIN_NAME }} certbot_email=${{ secrets.CERTBOT_EMAIL }}"
