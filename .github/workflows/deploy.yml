@@ -26,9 +26,22 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
-      - name: Create .env file
+      - name: Create env files
         run: |
           echo "${{ secrets.DOTENV }}" > .env
+          mkdir -p services/api-gateway services/auth-service services/app-integration-service services/secure-bot
+          cat << 'EOF' > services/api-gateway/.env.prod
+          ${{ secrets.API_GATEWAY_ENV }}
+          EOF
+          cat << 'EOF' > services/auth-service/.env.prod
+          ${{ secrets.AUTH_SERVICE_ENV }}
+          EOF
+          cat << 'EOF' > services/app-integration-service/.env.prod
+          ${{ secrets.APP_INTEGRATION_ENV }}
+          EOF
+          cat << 'EOF' > services/secure-bot/.env.prod
+          ${{ secrets.SECURE_BOT_ENV }}
+          EOF
 
       - name: Run Ansible playbook
         run: |
