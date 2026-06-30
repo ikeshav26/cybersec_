@@ -11,6 +11,55 @@ export const githubWebhookController = async (req: Request, res: Response) => {
     const { action, repositories_removed, repository, installation, pull_request } =
       req.body
 
+    const event = req.headers['x-github-event']
+
+    if (event === 'installation' && action === 'deleted') {
+      if (installation && installation.id) {
+        const dbInstallation = await prisma.installation.findUnique({
+          where: {
+            installationId: String(installation.id),
+          },
+          include: {
+            repositories: true,
+          },
+        })
+
+        if (dbInstallation) {
+          for (const repo of dbInstallation.repositories) {
+            try {
+              const token = jwt.sign(
+                { id: dbInstallation.userId },
+                process.env.JWT_SECRET as string,
+              )
+
+              await axios.delete(
+                `${process.env.SECURE_BOT_SERVICE_URL}/api/secure-bot/scan/delete/data/${repo.id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                },
+              )
+            } catch (err) {
+              console.error(`Failed to delete secure-bot history for repo ${repo.repo_name}:`, err)
+            }
+          }
+
+          await prisma.repository.deleteMany({
+            where: {
+              installationId: dbInstallation.id,
+            },
+          })
+
+          await prisma.installation.delete({
+            where: {
+              id: dbInstallation.id,
+            },
+          })
+        }
+      }
+    }
+
     if (action === 'removed') {
       for (const repo of repositories_removed) {
         const repository = await prisma.repository.findFirst({
