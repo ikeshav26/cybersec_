@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../config/db.js'
 import { App } from 'octokit'
 import axios from 'axios'
+import jwt from 'jsonwebtoken'
 
 const githubApp = new App({
   appId: process.env.GITHUB_APP_ID!,
@@ -75,14 +76,96 @@ export const syncRepos = async (req: Request, res: Response) => {
       }
     }
 
-    const ocktokit = await githubApp.getInstallationOctokit(
-      Number(findInstallation.installationId),
-    )
-    const response = await ocktokit.request('GET /installation/repositories', {
-      per_page: 100,
-    })
+    let githubRepos
+    try {
+      const ocktokit = await githubApp.getInstallationOctokit(
+        Number(findInstallation.installationId),
+      )
+      const response = await ocktokit.request('GET /installation/repositories', {
+        per_page: 100,
+      })
+      githubRepos = response.data.repositories
+    } catch (octokitErr: any) {
+      console.error('Error fetching repositories from GitHub App:', octokitErr)
+      const isInstallationError =
+        octokitErr.status === 404 ||
+        octokitErr.status === 403 ||
+        octokitErr.status === 401 ||
+        (octokitErr.message && (
+          octokitErr.message.toLowerCase().includes('suspended') ||
+          octokitErr.message.toLowerCase().includes('not found') ||
+          octokitErr.message.toLowerCase().includes('bad credentials')
+        ))
 
-    const githubRepos = response.data.repositories
+      if (isInstallationError) {
+        console.log(`Installation ${findInstallation.installationId} is suspended or deleted on GitHub. Cleaning up local database.`)
+
+        const existingDbRepos = await prisma.repository.findMany({
+          where: { installationId: findInstallation.id },
+        })
+
+        if (existingDbRepos.length > 0) {
+          const secureBotUrl =
+            process.env.SECURE_BOT_SERVICE_BASE_URL ||
+            process.env.SECURE_BOT_URL ||
+            process.env.SECURE_BOT_SERVICE_URL ||
+            'http://localhost:5002'
+
+          const token = jwt.sign(
+            { id: findInstallation.userId },
+            process.env.JWT_SECRET as string,
+          )
+
+          await Promise.all(
+            existingDbRepos.map(async (repo) => {
+              try {
+                await axios.delete(
+                  `${secureBotUrl}/api/secure-bot/scan/delete/data/${repo.id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  },
+                )
+              } catch (deleteErr) {
+                console.error(`Failed to delete secure-bot history for repo ${repo.repo_name}:`, deleteErr)
+              }
+            }),
+          )
+
+          await prisma.repository.deleteMany({
+            where: {
+              id: {
+                in: existingDbRepos.map((repo) => repo.id),
+              },
+            },
+          })
+        }
+
+        try {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "auth"."User" SET "installationID" = NULL WHERE "id" = $1`,
+            findInstallation.userId,
+          )
+        } catch (dbErr) {
+          console.error('Failed to update User installationID in auth schema:', dbErr)
+        }
+
+        await prisma.installation.delete({
+          where: {
+            id: findInstallation.id,
+          },
+        })
+
+        return res.status(200).json({
+          success: true,
+          message: 'GitHub App installation was suspended or deleted. Local records cleared.',
+          data: null,
+        })
+      }
+
+      throw octokitErr
+    }
 
     const existingDbRepos = await prisma.repository.findMany({
       where: { installationId: findInstallation.id },

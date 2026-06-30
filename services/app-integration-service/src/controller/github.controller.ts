@@ -13,7 +13,7 @@ export const githubWebhookController = async (req: Request, res: Response) => {
 
     const event = req.headers['x-github-event']
 
-    if (event === 'installation' && action === 'deleted') {
+    if (event === 'installation' && (action === 'deleted' || action === 'suspend')) {
       if (installation && installation.id) {
         const dbInstallation = await prisma.installation.findUnique({
           where: {
@@ -43,6 +43,16 @@ export const githubWebhookController = async (req: Request, res: Response) => {
             } catch (err) {
               console.error(`Failed to delete secure-bot history for repo ${repo.repo_name}:`, err)
             }
+          }
+
+          // Update User table in auth schema to set installationID to NULL
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "auth"."User" SET "installationID" = NULL WHERE "id" = $1`,
+              dbInstallation.userId,
+            )
+          } catch (dbErr) {
+            console.error('Failed to update User installationID in auth schema:', dbErr)
           }
 
           await prisma.repository.deleteMany({
