@@ -1,52 +1,74 @@
 # CyberSuite
 
-**CyberSuite** is an AI-powered repository security monitoring and vulnerability remediation platform. Built using a modern **microservices architecture** inside a **Turborepo monorepo**, the project enables users to authenticate via GitHub, connect their repositories, automatically scan their codebase for vulnerabilities using Gemini AI, and apply patches directly via automated Pull Requests.
+**CyberSuite** is an AI-powered repository security monitoring and vulnerability remediation platform. Built using a modern **microservices architecture** inside a monorepo, it enables users to authenticate via GitHub, sync repositories, run vulnerability scans, apply AI-generated security patches, and stage remediations directly via automated Pull Requests.
 
 ---
 
-## Project Architecture & Directory Structure
-
-The project is structured as a monorepo containing multiple independent services and frontend applications:
+## Project Structure
 
 ```text
 ├── apps/
-│   └── web/                        # Next.js frontend application (Testing Dashboard)
+│   └── web-2/                      # React + Vite + Tailwind CSS frontend dashboard
 ├── services/
-│   ├── auth-service/               # Service for user profiles, GitHub OAuth, and session tokens
-│   ├── app-integration-service/    # Service for GitHub App installation and repository syncing
-│   └── secure-bot/                 # Service for AI vulnerability scanning, cloning, and PR patching
-├── packages/                       # Shared configurations (TypeScript, ESLint, UI UI stub library)
-└── docs/                           # Detailed service flows and documentation
+│   ├── api-gateway/                # Reverse proxy, rate limiting, and route orchestration
+│   ├── auth-service/               # User profiles, GitHub OAuth, and session tokens
+│   ├── app-integration-service/    # GitHub App installations and repository syncing
+│   └── secure-bot/                 # AI vulnerability scanner & PR patch generator
+├── terraform/                      # Infrastructure provisioning scripts (DigitalOcean)
+├── ansible/                        # Automated server deployment and setup playbooks
+└── .github/workflows/              # GitHub Actions CI/CD (release tagging and CD deployments)
 ```
+
+---
+
+## Technical Stack
+
+### Frontend (`apps/web-2`)
+- **Core:** React 19, TypeScript, Vite
+- **Styling:** Tailwind CSS (v4), Glassmorphic custom design
+- **State & Routing:** Zustand, React Router DOM
+- **Animations:** GSAP (GreenSock Animation Platform)
+
+### Backend Services (`services/*`)
+- **Runtime & Framework:** Node.js, Express, TypeScript
+- **Queuing & Cache:** BullMQ (job queuing), Redis (state/cache)
+- **Database:** PostgreSQL (isolated via schema namespaces `auth`, `integration`, `bot`)
+- **Database Client:** Prisma ORM
+- **API Clients & Security:** Octokit (GitHub API integration), Gemini AI & OpenRouter (patch generation)
+
+### Third-Party Scanners
+- **Security Checkers:** Semgrep, Gitleaks, Trivy (run inside transient containers)
+
+### Infrastructure & Deployment
+- **Infra Provisioning:** Terraform (Droplets, DNS entries)
+- **Deployment Automation:** Ansible (packages, env config, SSL, migrations, and compose setups)
+- **Containerization:** Docker & Docker Compose (multi-container isolation)
+- **Web Server:** Nginx (acting as a reverse proxy) with Certbot SSL certificates
+- **CI/CD:** GitHub Actions (automating package version bumps and trigger-based Ansible deploys)
 
 ---
 
 ## Services Overview
 
-### 1. Web Application (`apps/web`)
-
-A Next.js frontend application featuring a dark mode glassmorphic dashboard. It serves as the visual testing interface, handling successful OAuth redirects, linking user sessions to GitHub App installations, triggering repository sync tasks on the integration service, and displaying active, protected code repositories.
+### 1. API Gateway (`services/api-gateway`)
+Orchestrates incoming client traffic. It manages routing, JWT authorization checks, and rate-limiting policies via Redis before proxying requests to downstream microservices.
 
 ### 2. Authentication Service (`services/auth-service`)
-
-An Express microservice that manages user identity, GitHub OAuth verification, and authentication cookies/tokens. It connects to the Postgres database using a dedicated `auth` schema namespace to store user profiles and track installation mappings.
+Handles GitHub OAuth verification, session cookie management, and stores user profiles in the Postgres `auth` schema namespace.
 
 ### 3. App Integration Service (`services/app-integration-service`)
-
-An Express microservice that connects to the database via a dedicated `integration` schema namespace. It manages the registration of GitHub App installations and interacts with the GitHub API using Octokit to fetch and sync the list of repositories accessible to the app.
+Interfaces with the GitHub App installation flow, retrieves repository access scopes, and manages metadata mappings within the Postgres `integration` schema namespace.
 
 ### 4. Secure Bot (`services/secure-bot`)
-
-The core security agent that automates vulnerability detection and fixing. When a repository scan is requested:
-
-- It obtains credentials and locally clones the target repository.
-- It parses code files and passes them to the Gemini AI API for security auditing.
-- It programmatically applies suggested security patches, creates remediation git branches, and opens automated Pull Requests.
+The core security agent. It processes repository scan requests asynchronously via **BullMQ** job queues. When a task is picked up by a scan worker:
+- It pulls target source code, runs Semgrep/Gitleaks/Trivy scanners.
+- It uses Gemini AI to analyze warnings and generate secure code patches.
+- It commits/pushes remediation branches and automatically opens GitHub Pull Requests.
 
 ---
 
 ## Architectural Highlights
 
-- **Monorepo Management:** Powered by Turborepo and `pnpm` workspace workspaces for fast, parallelized builds and local development.
-- **Database Isolation:** Utilizes a single PostgreSQL instance but enforces a **Database-per-Service** isolation model using PostgreSQL schema namespaces (`auth` and `integration`), avoiding migration conflicts while maintaining strict service boundaries.
+- **Monorepo Management:** Monorepo using `pnpm` workspaces for local development and shared configuration dependencies.
+- **Database Isolation:** Single PostgreSQL instance running a **Database-per-Service** isolation model using PostgreSQL schema namespaces (`auth`, `integration`, and `bot`).
 - **Token-based Security:** Enforces shared JWT verification across service layers to protect inter-service requests and authorize user sessions.

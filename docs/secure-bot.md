@@ -6,8 +6,8 @@ The **Secure Bot Service** is responsible for triggering security scans on user 
 
 ## 1. Database Configuration
 
-* **PostgreSQL Schema:** Uses the default schema or isolated schema as configured via `DATABASE_URL` in `.env`.
-* **ORM:** Prisma Client.
+* **PostgreSQL Schema:** `bot` (isolated using the connection parameter `?schema=bot` or the adapter `{ schema: 'bot' }`).
+* **ORM:** Prisma Client with `@prisma/adapter-pg`.
 
 ### Models:
 ```prisma
@@ -48,7 +48,21 @@ model Finding {
 
 ---
 
-## 2. API Endpoints
+## 2. Background Queue & Scanners (BullMQ)
+
+The **Secure Bot** uses **BullMQ** (powered by **Redis**) to handle resource-heavy repository cloning and security analysis asynchronously in the background.
+
+1. **Queuing:** When a user requests a scan, a scan job containing the repository coordinates is pushed to the Redis-backed BullMQ `scan-queue`.
+2. **Workers:** A background thread worker (`scan.worker.ts`) polls the queue, obtains the job, and starts cloning the repository locally.
+3. **Scanners:** The worker runs three automated security scanners:
+   - **Gitleaks:** Checks for exposed secrets/keys in the codebase.
+   - **Semgrep:** Scans for code pattern vulnerabilities (SQL injection, XSS, insecure dependencies).
+   - **Trivy:** Analyzes package lockfiles for known CVEs.
+4. **AI Processing:** The bot compiles the findings, passes the vulnerable code contexts to the **Gemini AI / OpenRouter** APIs, generates explanations and code diff fixes, and updates the scan status in the `bot` database schema.
+
+---
+
+## 3. API Endpoints
 
 ### `POST /api/secure-bot/scan/repo/:id`
 Initiates a new security scan for the given repository.
