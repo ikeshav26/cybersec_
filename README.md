@@ -1,6 +1,6 @@
-# CyberSuite
+# Aegis
 
-**CyberSuite** is an AI-powered repository security monitoring and vulnerability remediation platform. Built using a modern **microservices architecture** inside a monorepo, it enables users to authenticate via GitHub, sync repositories, run vulnerability scans, apply AI-generated security patches, and stage remediations directly via automated Pull Requests.
+**Aegis** is an AI-powered repository security monitoring and vulnerability remediation platform. Built using a modern **microservices architecture** inside a monorepo, it enables users to authenticate via GitHub, sync repositories, run vulnerability scans, apply AI-generated security patches, and stage remediations directly via automated Pull Requests.
 
 ---
 
