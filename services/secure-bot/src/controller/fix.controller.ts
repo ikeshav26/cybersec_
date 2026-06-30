@@ -20,7 +20,7 @@ class SimpleMutex {
 
   async run<T>(fn: () => Promise<T>): Promise<T> {
     const res = this.queue.then(fn)
-    this.queue = res.catch(() => {})
+    this.queue = res.catch(() => { })
     return res
   }
 }
@@ -64,10 +64,11 @@ export const fixFinding = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Could not get repo details' })
       }
       const repoUrl = repo.data.data.repo_url
+      const installationId = repo.data.data.installationId
 
       const clonePath = path.join(process.cwd(), 'fixes', finding.scan.id)
       if (!fs.existsSync(clonePath)) {
-        await cloneRepo(repoUrl, clonePath)
+        await cloneRepo(repoUrl, clonePath, installationId)
       }
 
       console.log('Cloning complete to path: ', clonePath)
@@ -165,9 +166,10 @@ export const fixAllFindings = async (req: Request, res: Response) => {
           return res.status(400).json({ message: 'Could not get repo details' })
         }
         const repoUrl = repo.data.data.repo_url
+        const installationId = repo.data.data.installationId
         const clonePath = path.join(process.cwd(), 'fixes', firstFinding!.scan.id)
         if (!fs.existsSync(clonePath)) {
-          await cloneRepo(repoUrl, clonePath)
+          await cloneRepo(repoUrl, clonePath, installationId)
         }
         console.log('Cloning complete to path: ', clonePath)
 

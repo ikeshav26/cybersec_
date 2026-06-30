@@ -26,7 +26,7 @@ export async function runBackgroundScan(
     })
 
     console.log(`Cloning repository for scanId:${scanId}:`)
-    await cloneRepo(repoUrl, clonePath)
+    await cloneRepo(repoUrl, clonePath, installationId)
 
     const [gitleaks, semgrep, trivy] = await Promise.all([
       getFindingByGitleaks(scanId, clonePath),

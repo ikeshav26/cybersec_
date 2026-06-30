@@ -118,7 +118,7 @@ export const openPullRequestForFix = async (req: Request, res: Response) => {
     // Re-clone repository if the local cache has been cleared
     if (!fs.existsSync(clonePath)) {
       console.log('Local clone path does not exist. Re-cloning repository to stage PR fixes...')
-      await cloneRepo(repoUrl, clonePath)
+      await cloneRepo(repoUrl, clonePath, installationId)
     }
 
     // Ensure all modified files are written using the database's fixedCode (which is the source of truth for resolved fixes)
