@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../config/db.js'
 import { App } from 'octokit'
+import axios from 'axios'
 
 const githubApp = new App({
   appId: process.env.GITHUB_APP_ID!,
@@ -82,6 +83,48 @@ export const syncRepos = async (req: Request, res: Response) => {
     })
 
     const githubRepos = response.data.repositories
+
+    const existingDbRepos = await prisma.repository.findMany({
+      where: { installationId: findInstallation.id },
+    })
+
+    const githubRepoNames = githubRepos.map((repo: any) => repo.full_name)
+    const reposToDelete = existingDbRepos.filter(
+      (repo) => !githubRepoNames.includes(repo.repo_name),
+    )
+
+    if (reposToDelete.length > 0) {
+      const secureBotUrl =
+        process.env.SECURE_BOT_SERVICE_BASE_URL ||
+        process.env.SECURE_BOT_URL ||
+        'http://localhost:5002'
+      const authHeader = req.headers.authorization
+
+      await Promise.all(
+        reposToDelete.map(async (repo) => {
+          try {
+            await axios.delete(
+              `${secureBotUrl}/api/secure-bot/scan/delete/data/${repo.id}`,
+              {
+                headers: {
+                  ...(authHeader ? { Authorization: authHeader } : {}),
+                },
+              },
+            )
+          } catch (deleteErr) {
+            console.error(`Failed to delete secure-bot history for repo ${repo.repo_name}:`, deleteErr)
+          }
+        }),
+      )
+
+      await prisma.repository.deleteMany({
+        where: {
+          id: {
+            in: reposToDelete.map((repo) => repo.id),
+          },
+        },
+      })
+    }
 
     const syncedRepos = await Promise.all(
       githubRepos.map(async (repo) => {
