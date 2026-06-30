@@ -42,42 +42,44 @@ const FixesConsoleTab = ({
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                <th className="p-4 pl-6">Scan ID</th>
-                <th className="p-4">Repository Name</th>
-                <th className="p-4 text-center">Patched Vulnerabilities</th>
-                <th className="p-4 text-center">Date Remedied</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/[0.04]">
-              {fixesScans.map((scanItem) => {
-                const resolvedCount = scanItem.findings.filter((f: any) => f.status === 'RESOLVED').length
-                return (
-                  <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
-                    <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
-                    <td className="p-4 text-center text-emerald-400 font-bold">
-                      ✓ {resolvedCount} resolved
-                    </td>
-                    <td className="p-4 text-center text-xs text-neutral-400">
-                      {new Date(scanItem.updatedAt).toLocaleString()}
-                    </td>
-                    <td className="p-4 text-center">
-                      <button
-                        onClick={() => handleInspectFixes(scanItem.id)}
-                        className="inline-flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-emerald-950/40 transition-all cursor-pointer"
-                      >
-                        Inspect Fixes
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[750px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                  <th className="p-4 pl-6">Scan ID</th>
+                  <th className="p-4">Repository Name</th>
+                  <th className="p-4 text-center">Patched Vulnerabilities</th>
+                  <th className="p-4 text-center">Date Remedied</th>
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm divide-y divide-white/[0.04]">
+                {fixesScans.map((scanItem) => {
+                  const resolvedCount = scanItem.findings.filter((f: any) => f.status === 'RESOLVED').length
+                  return (
+                    <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
+                      <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
+                      <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
+                      <td className="p-4 text-center text-emerald-400 font-bold">
+                        ✓ {resolvedCount} resolved
+                      </td>
+                      <td className="p-4 text-center text-xs text-neutral-400">
+                        {new Date(scanItem.updatedAt).toLocaleString()}
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          onClick={() => handleInspectFixes(scanItem.id)}
+                          className="inline-flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-emerald-950/40 transition-all cursor-pointer"
+                        >
+                          Inspect Fixes
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             currentPage={fixesPage}
             totalItems={totalFixes}

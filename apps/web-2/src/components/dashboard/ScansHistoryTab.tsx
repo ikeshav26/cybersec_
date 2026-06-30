@@ -43,54 +43,56 @@ const ScansHistoryTab = ({
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                <th className="p-4 pl-6">Scan ID</th>
-                <th className="p-4">Repository Name</th>
-                <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-center">Findings Detected</th>
-                <th className="p-4 text-center">Date Created</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/[0.04]">
-              {scans.map((scanItem) => (
-                <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
-                  <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
-                  <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
-                  <td className="p-4 text-center">
-                    <span
-                      className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanItem.status === 'SUCCESS'
-                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                        : scanItem.status === 'FAILED'
-                          ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                          : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
-                        }`}
-                    >
-                      {scanItem.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-center font-bold text-neutral-200">
-                    {scanItem.findings?.length || 0} issues
-                  </td>
-                  <td className="p-4 text-center text-xs text-neutral-400">
-                    {new Date(scanItem.createdAt).toLocaleString()}
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => setActiveScanIdForFindings(scanItem.id)}
-                      disabled={scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0}
-                      className={`inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0 ? 'opacity-50 disabled:cursor-not-allowed' : ''
-                        }`}
-                    >
-                      {scanItem.findings?.length == 0 ? 'No Findings' : scanItem.status === "IN_PROGRESS" ? "Scanning..." : "View Findings"}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[800px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                  <th className="p-4 pl-6">Scan ID</th>
+                  <th className="p-4">Repository Name</th>
+                  <th className="p-4 text-center">Status</th>
+                  <th className="p-4 text-center">Findings Detected</th>
+                  <th className="p-4 text-center">Date Created</th>
+                  <th className="p-4 text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-sm divide-y divide-white/[0.04]">
+                {scans.map((scanItem) => (
+                  <tr key={scanItem.id} className="hover:bg-white/[0.01] transition-colors">
+                    <td className="p-4 pl-6 font-mono text-xs text-neutral-300">{scanItem.id.substring(0, 8)}</td>
+                    <td className="p-4 font-semibold text-white">{scanItem.repoName}</td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanItem.status === 'SUCCESS'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                          : scanItem.status === 'FAILED'
+                            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                            : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                          }`}
+                      >
+                        {scanItem.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center font-bold text-neutral-200">
+                      {scanItem.findings?.length || 0} issues
+                    </td>
+                    <td className="p-4 text-center text-xs text-neutral-400">
+                      {new Date(scanItem.createdAt).toLocaleString()}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => setActiveScanIdForFindings(scanItem.id)}
+                        disabled={scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0}
+                        className={`inline-flex items-center gap-1 border border-white/10 hover:border-white/20 bg-white/[0.03] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${scanItem.status === 'IN_PROGRESS' || scanItem.findings?.length === 0 ? 'opacity-50 disabled:cursor-not-allowed' : ''
+                          }`}
+                      >
+                        {scanItem.findings?.length == 0 ? 'No Findings' : scanItem.status === "IN_PROGRESS" ? "Scanning..." : "View Findings"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             currentPage={scansPage}
             totalItems={totalScans}

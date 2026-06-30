@@ -108,67 +108,69 @@ const RepositoriesTab = ({
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                <th className="p-4 pl-6">Repository Name</th>
-                <th className="p-4">GitHub URL</th>
-                <th className="p-4 text-center">Security Scan Status</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/[0.04]">
-              {repos.map((repo) => {
-                const scanInfo = scanStatus[repo.id]
-                return (
-                  <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
-                    <td className="p-4">
-                      <a
-                        href={repo.repo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        Open GitHub
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </td>
-                    <td className="p-4 text-center">
-                      {scanInfo ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <span
-                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanInfo.status === 'SUCCESS'
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                : scanInfo.status === 'FAILED'
-                                  ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                  : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
-                              }`}
-                          >
-                            Status: {scanInfo.status}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-neutral-500 font-medium">Not Scanned Yet</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => triggerScan(repo.id)}
-                          disabled={scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS'}
-                          className="inline-flex items-center gap-1 bg-white text-black font-bold text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer disabled:opacity-50"
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[700px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                  <th className="p-4 pl-6">Repository Name</th>
+                  <th className="p-4">GitHub URL</th>
+                  <th className="p-4 text-center">Security Scan Status</th>
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm divide-y divide-white/[0.04]">
+                {repos.map((repo) => {
+                  const scanInfo = scanStatus[repo.id]
+                  return (
+                    <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
+                      <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
+                      <td className="p-4">
+                        <a
+                          href={repo.repo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
                         >
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                          {scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS' ? 'Scanning...' : 'Scan Now'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                          Open GitHub
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </td>
+                      <td className="p-4 text-center">
+                        {scanInfo ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <span
+                              className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${scanInfo.status === 'SUCCESS'
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                  : scanInfo.status === 'FAILED'
+                                    ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                    : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                                }`}
+                            >
+                              Status: {scanInfo.status}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-neutral-500 font-medium">Not Scanned Yet</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => triggerScan(repo.id)}
+                            disabled={scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS'}
+                            className="inline-flex items-center gap-1 bg-white text-black font-bold text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            {scanInfo?.status === 'QUEUED' || scanInfo?.status === 'IN_PROGRESS' ? 'Scanning...' : 'Scan Now'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             currentPage={reposPage}
             totalItems={totalRepos}

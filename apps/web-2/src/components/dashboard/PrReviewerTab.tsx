@@ -85,56 +85,58 @@ const PrReviewerTab = ({
         </div>
       ) : (
         <div className="border border-white/[0.08] rounded-xl bg-neutral-950 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
-                <th className="p-4 pl-6">Repository Name</th>
-                <th className="p-4">GitHub URL</th>
-                <th className="p-4 text-center">Auto PR Reviewer Status</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-white/[0.04]">
-              {repos.map((repo) => (
-                <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
-                  <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
-                  <td className="p-4">
-                    <a
-                      href={repo.repo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
-                    >
-                      Open GitHub
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </td>
-                  <td className="p-4 text-center font-semibold">
-                    <span
-                      className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${repo.prReviewer
-                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                          : 'bg-white/[0.05] border border-white/[0.08] text-neutral-400'
-                        }`}
-                    >
-                      {repo.prReviewer ? 'Active' : 'Disabled'}
-                    </span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleTogglePrReviewer(repo.id)}
-                      disabled={!!togglingPrReviewer[repo.id]}
-                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${repo.prReviewer
-                          ? 'bg-neutral-900 border border-white/[0.06] text-neutral-400 hover:text-white hover:bg-neutral-800'
-                          : 'bg-white text-black hover:bg-neutral-200'
-                        }`}
-                    >
-                      {togglingPrReviewer[repo.id] ? 'Updating...' : repo.prReviewer ? 'Disable Reviewer' : 'Enable Reviewer'}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[700px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] text-xs font-bold text-neutral-500 uppercase bg-white/[0.02]">
+                  <th className="p-4 pl-6">Repository Name</th>
+                  <th className="p-4">GitHub URL</th>
+                  <th className="p-4 text-center">Auto PR Reviewer Status</th>
+                  <th className="p-4 text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-sm divide-y divide-white/[0.04]">
+                {repos.map((repo) => (
+                  <tr key={repo.id} className="hover:bg-white/[0.01] transition-colors">
+                    <td className="p-4 pl-6 font-semibold text-white">{repo.repo_name}</td>
+                    <td className="p-4">
+                      <a
+                        href={repo.repo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-neutral-400 hover:text-white transition-colors"
+                      >
+                        Open GitHub
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </td>
+                    <td className="p-4 text-center font-semibold">
+                      <span
+                        className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${repo.prReviewer
+                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                            : 'bg-white/[0.05] border border-white/[0.08] text-neutral-400'
+                          }`}
+                      >
+                        {repo.prReviewer ? 'Active' : 'Disabled'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => handleTogglePrReviewer(repo.id)}
+                        disabled={!!togglingPrReviewer[repo.id]}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${repo.prReviewer
+                            ? 'bg-neutral-900 border border-white/[0.06] text-neutral-400 hover:text-white hover:bg-neutral-800'
+                            : 'bg-white text-black hover:bg-neutral-200'
+                          }`}
+                      >
+                        {togglingPrReviewer[repo.id] ? 'Updating...' : repo.prReviewer ? 'Disable Reviewer' : 'Enable Reviewer'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             currentPage={reviewerPage}
             totalItems={totalRepos}

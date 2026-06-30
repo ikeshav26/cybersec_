@@ -10,7 +10,9 @@ import {
   User,
   GitPullRequest,
   Database,
-  CheckCircle2
+  CheckCircle2,
+  Menu,
+  X
 } from 'lucide-react'
 import RepositoriesTab from '../components/dashboard/RepositoriesTab'
 import ScansHistoryTab from '../components/dashboard/ScansHistoryTab'
@@ -73,6 +75,7 @@ const Dashboard = () => {
     const savedTab = localStorage.getItem('activeTab')
     return (savedTab as any) || 'repositories'
   })
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [isScansLoading, setIsScansLoading] = useState(false)
@@ -727,9 +730,33 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full bg-black text-white font-sans pl-64">
+    <div className="relative flex min-h-screen w-full bg-black text-white font-sans pl-0 lg:pl-64">
+      {/* Mobile Top Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-neutral-950 border-b border-white/[0.08] flex items-center justify-between px-6 z-25 lg:hidden">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-white" />
+          <span className="text-sm font-black tracking-[0.25em] uppercase text-white">aegis</span>
+        </div>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="text-neutral-400 hover:text-white p-1.5 rounded-lg border border-white/10 bg-white/[0.02] cursor-pointer"
+        >
+          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </header>
+
+      {/* Mobile Overlay backdrop */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-20 lg:hidden animate-in fade-in duration-200"
+        />
+      )}
+
       {/* ─── Left Sidebar ─── */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 border-r border-white/[0.08] bg-neutral-950 flex flex-col justify-between z-30">
+      <aside className={`fixed left-0 top-0 bottom-0 w-64 border-r border-white/[0.08] bg-neutral-950 flex flex-col justify-between z-30 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         <div className="p-6">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
@@ -769,6 +796,7 @@ const Dashboard = () => {
                   onClick={() => {
                     setActiveScanIdForFindings(null)
                     setActiveTab(tab.id as any)
+                    setIsSidebarOpen(false) // Close sidebar on mobile select
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${activeTab === tab.id && !activeScanIdForFindings
                     ? 'bg-white/[0.06] text-white border-l-2 border-white pl-2 rounded-l-none font-semibold'
@@ -787,6 +815,7 @@ const Dashboard = () => {
         <div className="p-4 border-t border-white/[0.08] space-y-1.5">
           <Link
             to="/"
+            onClick={() => setIsSidebarOpen(false)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-neutral-400 hover:text-white hover:bg-white/[0.04] transition-all"
           >
             <Home className="w-4 h-4 shrink-0" />
@@ -803,7 +832,7 @@ const Dashboard = () => {
       </aside>
 
       {/* ─── Right Centered Wide Content Area ─── */}
-      <main className="flex-1 bg-black p-8 md:p-12 overflow-y-auto w-full max-w-[1400px] mx-auto">
+      <main className="flex-1 bg-black px-4 py-8 pt-24 md:p-12 lg:pt-12 overflow-y-auto w-full max-w-[1400px] mx-auto animate-in fade-in duration-300">
 
         {isPageLoading ? (
           <div className="space-y-8 animate-pulse">
