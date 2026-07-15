@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/useUserStore'

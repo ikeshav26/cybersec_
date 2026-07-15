@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import { useState } from 'react'
 import { RefreshCw, ExternalLink, Database, Play, Info, Shield } from 'lucide-react'
 import Pagination from '../ui/Pagination'

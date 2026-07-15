@@ -72,3 +72,13 @@ The core security agent. It processes repository scan requests asynchronously vi
 - **Monorepo Management:** Monorepo using `pnpm` workspaces for local development and shared configuration dependencies.
 - **Database Isolation:** Single PostgreSQL instance running a **Database-per-Service** isolation model using PostgreSQL schema namespaces (`auth`, `integration`, and `bot`).
 - **Token-based Security:** Enforces shared JWT verification across service layers to protect inter-service requests and authorize user sessions.
+
+---
+
+## License
+
+**All Rights Reserved.**
+
+This project is proprietary and confidential. You may not copy, modify, distribute, or use this project for your own benefit without explicit written permission. Any unauthorized use or copying will be met with legal action and takedown notices. 
+
+See the [LICENSE](./LICENSE) file for more details.

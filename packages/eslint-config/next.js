@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import js from "@eslint/js";
 import { globalIgnores } from "eslint/config";
 import eslintConfigPrettier from "eslint-config-prettier";

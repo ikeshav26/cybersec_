@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import express, { Request, Response } from 'express'
 import { authProxy } from './routes/auth.route.js'
 import { appIntegrationProxy } from './routes/app-integration.routes.js'

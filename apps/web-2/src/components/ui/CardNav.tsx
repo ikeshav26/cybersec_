@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 // use your own icon import if react-icons is not available

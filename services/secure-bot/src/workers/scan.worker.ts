@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import { Worker } from 'bullmq'
 import { runBackgroundScan } from '../utils/background-scanner.js'
 import { redisConnectionOptions } from '../config/redis.js'

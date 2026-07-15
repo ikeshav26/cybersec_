@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import rateLimit from 'express-rate-limit'
 import RedisStore, { RedisReply } from 'rate-limit-redis'
 import { redisClient } from '../config/redis.js'

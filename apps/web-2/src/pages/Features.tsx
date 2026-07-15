@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import { Link } from 'react-router-dom'
 import { useUserStore } from '../store/useUserStore'
 import { ArrowRight, Lock, Shield, Trash2 } from 'lucide-react'

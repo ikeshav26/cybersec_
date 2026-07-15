@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import type { Request, Response } from 'express'
 import { cloneRepo } from '../utils/clone-repo.js'
 import fs from 'fs'

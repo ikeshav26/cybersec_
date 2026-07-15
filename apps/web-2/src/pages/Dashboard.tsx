@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Keshav Gilhotra. All Rights Reserved.
+ * This file is part of a proprietary project. Unauthorized copying is strictly prohibited.
+ */
+
 import { useState, useEffect } from 'react'
 import { useUserStore } from '../store/useUserStore'
 import { useDashboardStore } from '../store/useDashboardStore'
